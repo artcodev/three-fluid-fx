@@ -1,20 +1,22 @@
 ---
 const gaId = import.meta.env.PUBLIC_GA_ID
 const enabled = import.meta.env.VERCEL_ENV === 'production' && Boolean(gaId)
+const gaSrc = enabled ? `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}` : undefined
+const gaScript = enabled
+  ? `
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function gtag(){window.dataLayer.push(arguments);}
+    window.gtag('js', new Date());
+    window.gtag('config', ${JSON.stringify(gaId)});
+  `
+  : undefined
 ---
 
 {
   enabled && (
     <>
-      <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
-      <script is:inline define:vars={{ gaId }}>
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', gaId);
-        `}
-      </script>
+      <script is:inline async src={gaSrc} />
+      <script is:inline set:html={gaScript} />
     </>
   )
 }

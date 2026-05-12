@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'node:path'
 
 export default defineConfig({
+  site: 'https://three-fluid-fx.artcreativecode.com',
   integrations: [mdx()],
   outDir: './dist',
   devToolbar: {
