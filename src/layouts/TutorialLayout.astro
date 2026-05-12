@@ -1,0 +1,102 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import Analytics from '../components/site/Analytics.astro'
+import SiteFooter from '../components/site/SiteFooter.astro'
+import SiteMenu from '../components/site/SiteMenu.astro'
+import '../styles/site.css'
+import '../styles/tutorials.css'
+
+interface Heading {
+  depth: number
+  slug: string
+  text: string
+}
+
+interface TutorialLike {
+  id: string
+  data: {
+    title: string
+    description: string
+    section: string
+    order: number
+    badge?: string
+  }
+}
+
+const {
+  entry,
+  tutorials,
+  headings,
+} = Astro.props as {
+  entry: TutorialLike | CollectionEntry<'tutorials'>
+  tutorials: CollectionEntry<'tutorials'>[]
+  headings: Heading[]
+}
+
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3)
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{entry.data.title} - three-fluid-fx tutorials</title>
+    <meta name="description" content={entry.data.description} />
+    <Analytics />
+  </head>
+  <body>
+    <SiteMenu active="tutorials" />
+    <div class="docs-shell">
+      <aside class="side-nav" aria-label="Tutorial navigation">
+        <a class="brand" href="/tutorials/">
+          <span>three-fluid-fx</span>
+          <strong>Tutorials</strong>
+        </a>
+        <nav>
+          {
+            tutorials.map((tutorial) => (
+              <a class:list={['nav-link', tutorial.id === entry.id && 'is-active']} href={`/tutorials/${tutorial.id}/`}>
+                <span>{tutorial.data.section}</span>
+                {tutorial.data.title}
+              </a>
+            ))
+          }
+        </nav>
+        <div class="nav-note">
+          <a href="/">Examples index</a>
+          <a href="https://github.com/artcodev/three-fluid-fx">GitHub</a>
+        </div>
+      </aside>
+
+      <main class="doc-main">
+        <header class="doc-hero">
+          <p>{entry.data.section}</p>
+          <h1>{entry.data.title}</h1>
+          <div class="lead">{entry.data.description}</div>
+          {entry.data.badge && <span class="badge">{entry.data.badge}</span>}
+        </header>
+
+        <article class="doc-content">
+          <slot />
+        </article>
+      </main>
+
+      {
+        toc.length > 0 && (
+          <aside class="toc" aria-label="On this page">
+            <p>On this page</p>
+            <nav>
+              {toc.map((heading) => (
+                <a class:list={[heading.depth === 3 && 'is-sub']} href={`#${heading.slug}`}>
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+          </aside>
+        )
+      }
+    </div>
+    <SiteFooter variant="docs" />
+  </body>
+</html>

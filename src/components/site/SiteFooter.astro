@@ -1,0 +1,18 @@
+---
+interface Props {
+  variant?: 'site' | 'docs'
+}
+
+const { variant = 'site' } = Astro.props
+const year = new Date().getFullYear()
+---
+
+<footer class:list={['site-footer', variant === 'docs' && 'site-footer--docs']}>
+  <span>© {year} three-fluid-fx by Artem Korenevych</span>
+  <nav aria-label="Footer navigation">
+    <a href="/">Examples</a>
+    <a href="/tutorials/">Tutorials</a>
+    <a href="https://github.com/artcodev/three-fluid-fx">GitHub</a>
+    <a href="https://www.npmjs.com/package/three-fluid-fx">npm</a>
+  </nav>
+</footer>

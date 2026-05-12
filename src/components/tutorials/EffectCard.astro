@@ -1,0 +1,19 @@
+---
+interface Props {
+  title: string
+  family: string
+  reads: string
+  params: string
+}
+
+const { title, family, reads, params } = Astro.props
+---
+
+<article class="effect-card">
+  <span>{family}</span>
+  <strong>{title}</strong>
+  <p><strong>Reads:</strong> {reads}</p>
+  <p><strong>Tune:</strong> {params}</p>
+  <slot />
+</article>
+

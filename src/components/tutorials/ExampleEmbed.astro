@@ -1,0 +1,37 @@
+---
+interface Props {
+  src: string
+  title: string
+  caption?: string
+}
+
+const { src, title, caption } = Astro.props
+const base = import.meta.env.PUBLIC_EXAMPLES_BASE ?? ''
+
+function setSearchParam(input: string, key: string, value: string): string {
+  const hashIndex = input.indexOf('#')
+  const withoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input
+  const hash = hashIndex >= 0 ? input.slice(hashIndex) : ''
+  const queryIndex = withoutHash.indexOf('?')
+  const pathname = queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash
+  const search = queryIndex >= 0 ? withoutHash.slice(queryIndex + 1) : ''
+  const params = new URLSearchParams(search)
+  params.set(key, value)
+  const query = params.toString()
+  return `${pathname}${query ? `?${query}` : ''}${hash}`
+}
+
+const iframeSrc = setSearchParam(src, 'iframe', '1')
+const resolvedIframeSrc = iframeSrc.startsWith('/') ? `${base}${iframeSrc}` : iframeSrc
+const resolvedOpenSrc = src.startsWith('/') ? `${base}${src}` : src
+---
+
+<figure class="example-embed">
+  <div class="example-embed-frame">
+    <iframe src={resolvedIframeSrc} title={title} loading="lazy"></iframe>
+  </div>
+  <figcaption>
+    <span>{caption ?? title}</span>
+    <a href={resolvedOpenSrc}>Open example</a>
+  </figcaption>
+</figure>

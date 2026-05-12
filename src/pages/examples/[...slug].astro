@@ -1,0 +1,15 @@
+---
+import { examples } from '../../data/examples'
+import ExampleLayout from '../../layouts/ExampleLayout.astro'
+
+export function getStaticPaths() {
+  return examples.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }))
+}
+
+const { entry } = Astro.props
+---
+
+<ExampleLayout entry={entry} />

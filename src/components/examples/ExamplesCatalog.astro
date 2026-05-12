@@ -1,0 +1,87 @@
+---
+import { exampleCases } from '../../data/examples'
+import ExampleCard from './ExampleCard.astro'
+---
+
+<section class="examples-hero">
+  <div class="examples-hero-copy">
+    <div class="examples-hero-copy-inner">
+      <p class="examples-kicker">THREE-FLUID-FX</p>
+      <h1>Add stunning fluid dynamics in minutes.</h1>
+      <p class="examples-lead">
+        Add physics-driven liquid distortion, vibrant neon overlays, and massive GPGPU particle swarms to your Three.js scenes without writing boilerplate.
+      </p>
+      <p class="examples-support">
+        Choose WebGL/GLSL composer passes for legacy support, or bleeding-edge WebGPU/TSL nodes. Start with copy-pasteable minimal examples, then scale to production with full GUI tuning.
+      </p>
+      <div class="examples-actions">
+        <a class="site-link site-link--primary" href="/tutorials/effects-guide/">Explore Case Studies</a>
+        <a class="site-link" href="/examples/glsl/minimal/helloworld/">Copy-paste Hello World</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-demo" id="hero-demo-container">
+    <!-- A unique WebGL hero demo will be mounted here later -->
+  </div>
+</section>
+
+<script>
+  import { HeroDemo } from '../hero/HeroDemo'
+
+  const syncHeroViewportWidth = () => {
+    document.documentElement.style.setProperty(
+      '--hero-viewport-width',
+      `${document.documentElement.clientWidth}px`,
+    )
+  }
+
+  const initHeroDemo = async () => {
+    const container = document.getElementById('hero-demo-container')
+    if (!(container instanceof HTMLElement) || !HeroDemo.isSupported()) return
+
+    syncHeroViewportWidth()
+    window.addEventListener('resize', syncHeroViewportWidth)
+    window.visualViewport?.addEventListener('resize', syncHeroViewportWidth)
+    window.addEventListener(
+      'pagehide',
+      () => {
+        window.removeEventListener('resize', syncHeroViewportWidth)
+        window.visualViewport?.removeEventListener('resize', syncHeroViewportWidth)
+      },
+      { once: true },
+    )
+
+    if ('fonts' in document) {
+      await document.fonts.ready
+    }
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+
+    const demo = new HeroDemo(container)
+    try {
+      await demo.init()
+      window.addEventListener('pagehide', () => demo.destroy(), { once: true })
+    } catch (error) {
+      console.warn('Hero WebGPU demo failed to initialize.', error)
+      demo.destroy()
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeroDemo, { once: true })
+  } else {
+    void initHeroDemo()
+  }
+</script>
+
+<section class="examples-section" aria-labelledby="examples-heading">
+  <header class="examples-section-header">
+    <h2 id="examples-heading">Case studies</h2>
+    <p>
+      Each case ships in GLSL/WebGL and TSL/WebGPU where both runtimes make sense. Minimal examples
+      show the integration shape; full examples expose the effect surface you tune in real work.
+    </p>
+  </header>
+  <div class="examples-grid">
+    {exampleCases.map((item) => <ExampleCard item={item} />)}
+  </div>
+</section>

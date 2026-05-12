@@ -1,0 +1,283 @@
+---
+title: "Effects Guide"
+description: "A practical catalog of overlays and distortions: what each family reads, when to use it, and which parameters make it look good."
+section: "Visual effects"
+order: 2
+badge: "Overlay and distortion catalog"
+---
+
+import Callout from '../../components/tutorials/Callout.astro'
+import EffectCard from '../../components/tutorials/EffectCard.astro'
+import ExampleEmbed from '../../components/tutorials/ExampleEmbed.astro'
+import ParameterTable from '../../components/tutorials/ParameterTable.astro'
+import RecipeCard from '../../components/tutorials/RecipeCard.astro'
+import TextureChannels from '../../components/tutorials/TextureChannels.astro'
+
+The effect classes do not own the fluid. The solver runs once, then an effect
+decides how to display the latest textures.
+
+In WebGL, effects are `EffectComposer` passes:
+
+```ts
+const overlay = new OilOverlayPass(fluid)
+composer.addPass(new RenderPass(scene, camera))
+composer.addPass(overlay)
+composer.addPass(new OutputPass())
+```
+
+In WebGPU/TSL, effects are node factories:
+
+```ts
+pipeline.outputNode = oilOverlay(
+  sceneNode,
+  fluid.densityNode,
+  fluid.dyeNode,
+  fluid.velocityNode,
+  { intensity, time, vibrance },
+)
+```
+
+## Outputs used by effects
+
+<TextureChannels />
+
+Overlay and distortion effects usually read `densityTexture`. That name is a
+little misleading: RG stores a display-space flow vector and B stores density.
+Dye-aware overlays also read `dyeTexture`.
+
+## Overlay families
+
+Overlay effects add or mix color over the scene. Use them when the fluid should
+be visible as a layer rather than bending the pixels underneath.
+
+<div class="effect-grid">
+  <EffectCard
+    title="Default / Volume Cursor"
+    family="Cursor color"
+    reads="dyeTexture, densityTexture"
+    params="intensity, cursorColor, vibrance, dyeDissipation"
+  >
+    <p>Good for product sites and hero backgrounds where the user expects a clean cursor trail.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="Trail"
+    family="Directional wake"
+    reads="densityTexture"
+    params="intensity, cursorColor, low curl, reflectWalls"
+  >
+    <p>Use for sharp leading edges and long tails. Keep vorticity off when the streak should stay clean.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="Oil / Colorful / Rainbow Fish"
+    family="Velocity stylization"
+    reads="densityTexture or velocityTexture"
+    params="time, vibrance, curlStrength, velocityDissipation"
+  >
+    <p>Best when visible swirls matter. Raise curl and keep motion alive near 0.985 to 0.99.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="Smoke / Art Ink / Rainbow Ink"
+    family="Dye-aware strokes"
+    reads="dyeTexture, densityTexture"
+    params="enableDye, coloredStrokes, dyeDissipation, intensity"
+  >
+    <p>Use when stroke color matters. The dye field is separate, so color can live longer than the mask.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="Color Water"
+    family="Soft watercolor"
+    reads="dyeTexture, densityTexture"
+    params="low pressure, high dyeDissipation, open walls"
+  >
+    <p>Let the field relax outward. This wants soft diffusion rather than tight vortex motion.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="Liquid Lens"
+    family="Tinted lens overlay"
+    reads="dyeTexture, densityTexture"
+    params="colorize, bfecc false, intensity below bright overlays"
+  >
+    <p>Use when the stroke should feel like tinted glass or a liquid cursor lens.</p>
+  </EffectCard>
+</div>
+
+## Distortion families
+
+Distortion effects keep the scene color but shift where the scene is sampled.
+Use them for glass, heat haze, refraction, melting UI, and water surfaces.
+
+<div class="effect-grid">
+  <EffectCard
+    title="SimpleDistortionPass / simpleDistortion"
+    family="Baseline UV warp"
+    reads="densityTexture.rg"
+    params="intensity, splatForce, velocityDissipation"
+  >
+    <p>The cheapest option. It simply offsets scene UVs by the fluid flow.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="RGBShiftDistortionPass / rgbShiftDistortion"
+    family="Chromatic split"
+    reads="densityTexture.rg and densityTexture.b"
+    params="intensity, splatForce, enableVorticity"
+  >
+    <p>Use when motion should split red and blue channels along the flow direction.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="ChromaticDistortionPass / chromaticDistortion"
+    family="Iridescent smear"
+    reads="blurred densityTexture"
+    params="low visual intensity, high densityDissipation, vorticity"
+  >
+    <p>Good for oil-slick refraction. The effect is strong, so start with low intensity.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="WaterDistortionPass / waterDistortion"
+    family="Density-as-height"
+    reads="densityTexture.b"
+    params="larger splats, slow density decay, gentle curl"
+  >
+    <p>Uses the density gradient as a fake water normal. Flat regions stay sharp.</p>
+  </EffectCard>
+
+  <EffectCard
+    title="WaterCausticsDistortionPass / waterCausticsDistortion"
+    family="Water plus light web"
+    reads="densityTexture.rg and densityTexture.b"
+    params="time, intensity, active density mask"
+  >
+    <p>Adds a procedural caustic web over the water refraction. Pass time every frame.</p>
+  </EffectCard>
+</div>
+
+## Style recipes
+
+These are starting points, not sacred values. Copy a recipe, then tune by eye.
+
+<div class="recipe-grid">
+  <RecipeCard title="Clean cursor trail" label="Overlay">
+    <p>Use `TrailOverlayPass`, small `splatRadius`, medium `splatForce`, `enableVorticity = false`, and `reflectWalls = true`.</p>
+  </RecipeCard>
+
+  <RecipeCard title="Soft smoke" label="Overlay">
+    <p>Use `SmokeOverlayPass`, larger splats, slow density decay, vorticity on, and `reflectWalls = false` so plumes leave the screen.</p>
+  </RecipeCard>
+
+  <RecipeCard title="Color ink" label="Overlay">
+    <p>Use `ArtInkOverlayPass` or `RainbowInkOverlayPass`, set `fluid.enableDye = true`, and attach pointer splats with colored strokes.</p>
+  </RecipeCard>
+
+  <RecipeCard title="Watercolor bloom" label="Overlay">
+    <p>Use `ColorWaterOverlayPass`, low pressure iterations, high `dyeDissipation`, open walls, and gentle curl.</p>
+  </RecipeCard>
+
+  <RecipeCard title="Heat haze" label="Distortion">
+    <p>Use `SimpleDistortionPass`, low to medium intensity, and tune `splatForce` until motion is visible but not tearing the scene.</p>
+  </RecipeCard>
+
+  <RecipeCard title="Pool surface" label="Distortion">
+    <p>Use `WaterDistortionPass` or `WaterCausticsDistortionPass`, larger soft splats, slow density decay, and time for caustics.</p>
+  </RecipeCard>
+</div>
+
+## Common controls
+
+<ParameterTable
+  rows={[
+    {
+      name: 'intensity',
+      role: 'Visual gain inside the pass or node.',
+      tune: 'Overlay intensity can often be above 1. Distortion intensity should be lower because UV offsets can tear.',
+    },
+    {
+      name: 'vibrance',
+      role: 'Saturation boost away from luminance.',
+      tune: 'Use small values for production UI. Push higher for demo and reel visuals.',
+    },
+    {
+      name: 'cursorColor',
+      role: 'Base color for cursor-tinted overlays.',
+      tune: 'Used by default, volume cursor, and trail styles.',
+    },
+    {
+      name: 'time',
+      role: 'Animation clock for procedural palettes and caustics.',
+      tune: 'Update once per frame. Required for oil, colorful, rainbow fish, burn, and caustics.',
+    },
+    {
+      name: 'opacity',
+      role: 'TSL overlay mix amount.',
+      tune: 'Useful when stacking overlay and distortion in the same RenderPipeline output.',
+    },
+    {
+      name: 'velocityScale',
+      role: 'TSL-only gain for effects that read velocityTexture.',
+      tune: 'Lower it for velocity visualization and rainbow fish when the field is too hot.',
+    },
+  ]} />
+
+## Runtime style switching
+
+Create all WebGL passes once, add them to the composer, and toggle `enabled`.
+Disabled passes are skipped.
+
+```ts
+const overlays = {
+  trail: new TrailOverlayPass(fluid),
+  oil: new OilOverlayPass(fluid),
+  smoke: new SmokeOverlayPass(fluid),
+}
+
+for (const pass of Object.values(overlays)) {
+  pass.enabled = false
+  composer.addPass(pass)
+}
+
+function syncOverlay(style: keyof typeof overlays) {
+  const active = overlays[style]
+  for (const pass of Object.values(overlays)) pass.enabled = pass === active
+  active.intensity = params.intensity
+  if ('time' in active) active.time = elapsed
+}
+```
+
+For TSL, rebuild the output node when the style changes.
+
+```ts
+function buildOutput(style: FluidOverlayStyle) {
+  return fluidOverlay(style, sceneNode, fluid.densityNode, fluid.dyeNode, fluid.velocityNode, {
+    intensity,
+    time,
+    cursorColor,
+    vibrance,
+  })
+}
+
+setPipelineOutput(pipeline, buildOutput(params.overlayStyle))
+```
+
+<Callout title="What to document per effect">
+  A useful effect entry should say what visual task it solves, which fluid output
+  it reads, which parameters matter, and which demo preset is a good starting
+  point. It should not explain the whole fluid solver.
+</Callout>
+
+<ExampleEmbed
+  src="/examples/glsl/full/overlay/?demo=1&style=oil"
+  title="Full overlay catalog"
+  caption="The full overlay demo is the visual catalog for overlay styles."
+/>
+
+<ExampleEmbed
+  src="/examples/glsl/full/distortion/?demo=1&style=waterCaustics"
+  title="Full distortion catalog"
+  caption="The full distortion demo shows all distortion styles with live tuning."
+/>

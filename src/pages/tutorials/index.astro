@@ -1,0 +1,75 @@
+---
+import { getCollection } from 'astro:content'
+import TutorialLayout from '../../layouts/TutorialLayout.astro'
+import { exampleGroups, examples } from '../../data/examples'
+import { getDemoTutorialPath } from '../../data/exampleTutorials'
+
+const tutorials = (await getCollection('tutorials')).sort((a, b) => a.data.order - b.data.order)
+const landing = {
+  data: {
+    title: 'Tutorials',
+    description:
+      'Hand-authored guides for building fluid overlays, screen distortion, and particle effects with three-fluid-fx.',
+    section: 'Start',
+    order: 0,
+  },
+  id: 'index',
+} as const
+---
+
+<TutorialLayout entry={landing} tutorials={tutorials} headings={[]}>
+  <section class="intro-panel">
+    <p class="kicker">three-fluid-fx tutorials</p>
+    <h1>Build the effect, not the fluid solver.</h1>
+    <p>
+      These guides explain what the library gives you, which effect family to use, and how to tune
+      the important parameters for a finished visual result.
+    </p>
+  </section>
+
+  <section class="tutorial-grid" aria-label="Tutorial index">
+    {
+      tutorials.map((tutorial) => (
+        <a class="tutorial-card" href={`/tutorials/${tutorial.id}/`}>
+          <span>{tutorial.data.section}</span>
+          <strong>{tutorial.data.title}</strong>
+          <p>{tutorial.data.description}</p>
+        </a>
+      ))
+    }
+  </section>
+
+  <section class="demo-tutorials-index" aria-label="Demo walkthrough index">
+    <div class="demo-index-head">
+      <p class="kicker">Demo walkthroughs</p>
+      <h2>Personal tutorials for every demo.</h2>
+      <p>
+        Each walkthrough is tied to a runnable example and explains the render path, the fluid
+        output it consumes, and the controls that actually change the result.
+      </p>
+    </div>
+
+    {
+      exampleGroups.map((group) => {
+        const groupExamples = examples
+          .filter((example) => example.engine === group.engine && example.level === group.level)
+          .sort((a, b) => a.order - b.order)
+
+        return (
+          <section class="demo-index-group">
+            <h3>{group.label}</h3>
+            <div class="demo-nav-grid">
+              {groupExamples.map((example) => (
+                <a href={getDemoTutorialPath(example)}>
+                  <span>{example.eyebrow}</span>
+                  <strong>{example.shortTitle}</strong>
+                  <p>{example.cardDescription}</p>
+                </a>
+              ))}
+            </div>
+          </section>
+        )
+      })
+    }
+  </section>
+</TutorialLayout>

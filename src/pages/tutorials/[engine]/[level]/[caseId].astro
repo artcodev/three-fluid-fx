@@ -1,0 +1,134 @@
+---
+import { getCollection } from 'astro:content'
+import Callout from '../../../../components/tutorials/Callout.astro'
+import ExampleEmbed from '../../../../components/tutorials/ExampleEmbed.astro'
+import ParameterTable from '../../../../components/tutorials/ParameterTable.astro'
+import TutorialLayout from '../../../../layouts/TutorialLayout.astro'
+import {
+  examples,
+  formatEngine,
+  formatLevel,
+  getExampleGroup,
+  getExampleGroupLabel,
+  type ExampleEntry,
+} from '../../../../data/examples'
+import { getDemoTutorial, getDemoTutorialPath } from '../../../../data/exampleTutorials'
+
+export function getStaticPaths() {
+  return examples.map((entry) => ({
+    params: {
+      engine: entry.engine,
+      level: entry.level,
+      caseId: entry.caseId,
+    },
+    props: { entry },
+  }))
+}
+
+const { entry } = Astro.props as { entry: ExampleEntry }
+const tutorial = getDemoTutorial(entry)
+const tutorials = (await getCollection('tutorials')).sort((a, b) => a.data.order - b.data.order)
+const group = getExampleGroup(entry)
+const groupLabel = getExampleGroupLabel(entry)
+const related = group.filter((item) => item.slug !== entry.slug)
+const sourcePath = `examples/${entry.slug}/main.ts`
+const pageEntry = {
+  id: `demo-${entry.slug}`,
+  data: {
+    title: tutorial.title,
+    description: tutorial.description,
+    section: tutorial.section,
+    order: 100,
+    badge: tutorial.badge,
+  },
+}
+const headings = [
+  { depth: 2, slug: 'live-demo', text: 'Live demo' },
+  { depth: 2, slug: 'what-this-demo-teaches', text: 'What this demo teaches' },
+  { depth: 2, slug: 'implementation-path', text: 'Implementation path' },
+  { depth: 2, slug: 'parameters-to-tune', text: 'Parameters to tune' },
+  { depth: 2, slug: 'source-landmarks', text: 'Source landmarks' },
+  { depth: 2, slug: 'production-notes', text: 'Production notes' },
+]
+---
+
+<TutorialLayout entry={pageEntry} tutorials={tutorials} headings={headings}>
+  <div class="demo-meta" aria-label="Demo tutorial metadata">
+    <a href={`/examples/${entry.slug}/`}>Open demo</a>
+    <a href={entry.source.ts}>TypeScript source</a>
+    {entry.source.js && <a href={entry.source.js}>JavaScript source</a>}
+    <a href={tutorial.relatedGuideHref}>{tutorial.relatedGuideLabel}</a>
+  </div>
+
+  <p>
+    {tutorial.intro}
+  </p>
+
+  <Callout title="What this walkthrough is for">
+    <p>{tutorial.focus}</p>
+  </Callout>
+
+  <h2 id="live-demo">Live demo</h2>
+  <ExampleEmbed
+    src={`/examples/${entry.slug}/`}
+    title={`${entry.title} ${formatEngine(entry.engine)} ${formatLevel(entry.level)} demo`}
+    caption={`${groupLabel}: ${entry.shortTitle}`}
+  />
+
+  <h2 id="what-this-demo-teaches">What this demo teaches</h2>
+  <p>{tutorial.mentalModel}</p>
+  <ul class="demo-checklist">
+    {tutorial.outcome.map((item) => <li>{item}</li>)}
+  </ul>
+
+  <h2 id="implementation-path">Implementation path</h2>
+  <ol class="demo-step-list">
+    {
+      tutorial.implementation.map((step) => (
+        <li>
+          <strong>{step.title}</strong>
+          <p>{step.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+
+  <pre><code>{tutorial.snippet}</code></pre>
+
+  <h2 id="parameters-to-tune">Parameters to tune</h2>
+  <ParameterTable rows={tutorial.parameters} />
+
+  <h2 id="source-landmarks">Source landmarks</h2>
+  <div class="demo-source-card">
+    <p>
+      Start from <a href={entry.source.ts}>{sourcePath}</a>. These are the parts worth reading first:
+    </p>
+    <ul>
+      {tutorial.sourceFocus.map((item) => <li>{item}</li>)}
+    </ul>
+  </div>
+
+  <h2 id="production-notes">Production notes</h2>
+  <ul class="demo-checklist">
+    {tutorial.productionNotes.map((item) => <li>{item}</li>)}
+  </ul>
+
+  <section class="demo-related" aria-label="Related demos">
+    <div>
+      <p class="kicker">{groupLabel}</p>
+      <h2>Related demo walkthroughs</h2>
+    </div>
+    <div class="demo-nav-grid">
+      {
+        related.map((item) => (
+          <a href={getDemoTutorialPath(item)}>
+            <span>{item.eyebrow}</span>
+            <strong>{item.shortTitle}</strong>
+            <p>{item.cardDescription}</p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+</TutorialLayout>
+

@@ -1,0 +1,15 @@
+---
+interface Props {
+  title: string
+  label: string
+}
+
+const { title, label } = Astro.props
+---
+
+<article class="recipe-card">
+  <span>{label}</span>
+  <strong>{title}</strong>
+  <slot />
+</article>
+

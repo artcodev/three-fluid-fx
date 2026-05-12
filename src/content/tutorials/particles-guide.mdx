@@ -1,0 +1,385 @@
+---
+title: "Particles Guide"
+description: "How to use the fluid field with procedural particles and GPGPU particles, why camera data is passed, and how to tune the motion without ambiguity."
+section: "Particles"
+order: 3
+badge: "Procedural and GPGPU"
+---
+
+import Callout from '../../components/tutorials/Callout.astro'
+import ExampleEmbed from '../../components/tutorials/ExampleEmbed.astro'
+import FlowDiagram from '../../components/tutorials/FlowDiagram.astro'
+import ParameterTable from '../../components/tutorials/ParameterTable.astro'
+
+The library does not ship a particle engine. It gives you a flow field. A
+particle system becomes fluid-reactive when it samples that field and turns the
+sample into displacement or acceleration.
+
+<FlowDiagram steps={['fluid.velocityTexture', 'sample at particle screen position', 'convert screen flow to world flow', 'move particle']} />
+
+There are two useful patterns in this repository:
+
+- Procedural particles: no persistent particle simulation. Positions are
+  computed from a shape formula and displaced at render time.
+- GPGPU particles: position and velocity live in GPU textures. A compute or
+  fragment update pass advances them every frame.
+
+## The contract from the fluid side
+
+For particles, the core contract is small:
+
+```ts
+fluid.step(dt)
+
+particles.step({
+  velocityField: fluid.velocityTexture,
+  // particle-specific data...
+})
+```
+
+`velocityTexture.xy` stores the flow after the fluid step. That is the texture
+you want when particles should move with the simulated field.
+
+<Callout title="Do not couple particles to FluidSimulation">
+  A particle component should accept a `Texture`, not a `FluidSimulation`
+  instance. That keeps it reusable with curl-noise textures, SDF gradient
+  textures, video-driven fields, or any other 2D vector map.
+</Callout>
+
+## Procedural particles
+
+The trefoil example is the procedural path. It does not maintain particle
+position and velocity textures. Instead, each instance computes its base
+position from a knot formula, samples the fluid, and offsets the render-time
+position.
+
+```ts
+const particles = createTrefoilParticles(fluid.velocityNode, {
+  count: 4000,
+  tubeRadius: 0.22,
+  scale: 0.65,
+  pointSize: 7,
+})
+
+scene.add(particles.mesh)
+```
+
+The update path only changes uniforms:
+
+```ts
+particles.update({
+  elapsed,
+  modelRotation,
+  displacement,
+  dispThreshold,
+  dispRange,
+  dragStrength,
+  maxFlowSpeed,
+})
+```
+
+### What is happening
+
+The particle does not have memory. There is no integrated velocity from the
+previous frame. Every frame starts from a clean procedural position:
+
+```glsl
+vec3 base = trefoilPosition(instanceId);
+FluidSample sample = fluidSample(fluid, base);
+vec3 displaced = base + sample.flow * uDisplacement;
+```
+
+This is best when the visual has a strong underlying shape: a knot, ribbon,
+sphere shell, grid, portrait mask, typography, or any procedural field. The
+fluid acts like a brush that bends the shape.
+
+### Procedural particle controls
+
+<ParameterTable
+  rows={[
+    {
+      name: 'displacement',
+      role: 'How far the flow can push the procedural position.',
+      tune: 'Raise until the shape reacts clearly. Lower if the shape loses its identity.',
+    },
+    {
+      name: 'dispThreshold',
+      role: 'Minimum density or flow energy before displacement starts.',
+      tune: 'Raise it to keep weak background noise from moving the object.',
+    },
+    {
+      name: 'dispRange',
+      role: 'Soft transition width above the threshold.',
+      tune: 'Wider ranges feel smoother. Narrow ranges feel sharper and more digital.',
+    },
+    {
+      name: 'dragStrength',
+      role: 'Extra screen-plane pull from flow direction.',
+      tune: 'Use lightly. Too much turns a shaped field into a smear.',
+    },
+    {
+      name: 'maxFlowSpeed',
+      role: 'Clamp for hot pointer input.',
+      tune: 'Lower it when fast gestures explode the shape.',
+    },
+  ]} />
+
+## GPGPU particles
+
+The 2D and 3D flow-particle examples are GPGPU systems. They store persistent
+state on the GPU:
+
+<FlowDiagram steps={['position texture', 'velocity texture', 'fluid velocity texture', 'update pass', 'render billboards']} />
+
+Each frame, the particle update reads old position, old velocity, destination,
+and the fluid field. It writes new position and velocity into the next ping-pong
+targets.
+
+```ts
+particles.step({
+  dt,
+  velocityField: fluid.velocityTexture,
+  viewMatrix: camera.matrixWorldInverse,
+  projectionMatrix: camera.projectionMatrix,
+  cameraRight,
+  cameraUp,
+  modelRotation,
+  pointSize: 6,
+  spring: 4,
+  zeta: 1.15,
+  dragLin: 0.28,
+  dragQuad: 0.05,
+  aMax: 24,
+  vMaxScale: 1,
+  flowStrength: 1.2,
+  flowThreshold: 0.02,
+  maxFlowSpeed: 12,
+  responseGamma: 2,
+  depthLift: 0,
+  perpendicularAngle: 0,
+  sideVariation: 0,
+  depthAttenuationScale: 1,
+})
+```
+
+## Why camera data is passed
+
+This is the part that should be explicit in the tutorial. The fluid field is a
+2D screen-space texture. The particle positions are in local or world space.
+The particle update has to answer one question:
+
+> Which pixel of the fluid field is behind this particle on screen?
+
+That requires the same projection path used by rendering:
+
+```glsl
+vec3 worldPos = uModelRotation * pos;
+vec4 clip = uProjectionMatrix * uViewMatrix * vec4(worldPos, 1.0);
+vec2 ndc = clip.xy / clip.w;
+vec2 uv = ndc * 0.5 + 0.5;
+vec2 flow = texture2D(uFlow, clamp(uv, 0.0, 1.0)).xy;
+```
+
+Then the sampled flow is still a screen-space vector. `flow.x` means "move
+right on the screen", and `flow.y` means "move up on the screen". Particles
+need a world acceleration, so the update converts screen axes back into world
+directions:
+
+```glsl
+vec3 flowWorld = flow.x * uCameraRight + flow.y * uCameraUp;
+```
+
+That is why the step call needs:
+
+<ParameterTable
+  rows={[
+    {
+      name: 'viewMatrix',
+      role: 'Moves world positions into camera space.',
+      tune: 'Pass camera.matrixWorldInverse every frame.',
+    },
+    {
+      name: 'projectionMatrix',
+      role: 'Projects camera-space positions into clip space.',
+      tune: 'Pass camera.projectionMatrix after updating the camera aspect.',
+    },
+    {
+      name: 'cameraRight',
+      role: 'World direction that maps to screen X.',
+      tune: 'Read column 0 from camera.matrixWorld.',
+    },
+    {
+      name: 'cameraUp',
+      role: 'World direction that maps to screen Y.',
+      tune: 'Read column 1 from camera.matrixWorld.',
+    },
+    {
+      name: 'modelRotation',
+      role: 'Transforms particle local positions and directions when the particle object rotates.',
+      tune: 'Update from the particle mesh matrix before the step.',
+    },
+  ]} />
+
+Typical frame setup:
+
+```ts
+particles.points.updateMatrixWorld(true)
+modelRotation.setFromMatrix4(particles.points.matrixWorld)
+
+cameraRight.setFromMatrixColumn(camera.matrixWorld, 0)
+cameraUp.setFromMatrixColumn(camera.matrixWorld, 1)
+
+particles.step({
+  viewMatrix: camera.matrixWorldInverse,
+  projectionMatrix: camera.projectionMatrix,
+  cameraRight,
+  cameraUp,
+  modelRotation,
+  velocityField: fluid.velocityTexture,
+  // ...
+})
+```
+
+## Why particles do not fly away forever
+
+The example particle system combines flow acceleration with a spring-damper that
+pulls each particle back toward its destination.
+
+```glsl
+vec3 error = destination - position;
+vec3 aSpring = spring * spring * error;
+vec3 aDamp = -2.0 * zeta * spring * velocity;
+```
+
+Without this, a single pointer gesture eventually scatters the cloud. With it,
+the cloud can react, drift, and settle back into its designed layout.
+
+<ParameterTable
+  rows={[
+    {
+      name: 'spring',
+      role: 'How strongly a particle returns to its destination.',
+      tune: 'Higher values snap back faster. Lower values drift longer.',
+    },
+    {
+      name: 'zeta',
+      role: 'Damping ratio for the spring motion.',
+      tune: 'Around 1 is controlled. Lower values wobble. Higher values feel heavy.',
+    },
+    {
+      name: 'dragLin',
+      role: 'Linear velocity drag.',
+      tune: 'Use it to calm normal motion.',
+    },
+    {
+      name: 'dragQuad',
+      role: 'Quadratic drag for fast particles.',
+      tune: 'Use it to tame spikes from strong pointer input.',
+    },
+    {
+      name: 'aMax',
+      role: 'Acceleration clamp.',
+      tune: 'Prevents single samples from launching particles.',
+    },
+    {
+      name: 'vMaxScale',
+      role: 'Velocity clamp multiplier.',
+      tune: 'Lower it when particles streak too far after interaction.',
+    },
+  ]} />
+
+## Flow response controls
+
+Fluid velocity values can be noisy and uneven. The particle example shapes that
+input before applying it.
+
+<ParameterTable
+  rows={[
+    {
+      name: 'flowStrength',
+      role: 'Main multiplier for sampled fluid flow.',
+      tune: 'Raise for stronger interaction. Lower for subtle background motion.',
+    },
+    {
+      name: 'flowThreshold',
+      role: 'Dead zone before flow affects particles.',
+      tune: 'Raise to ignore weak residual fluid.',
+    },
+    {
+      name: 'maxFlowSpeed',
+      role: 'Clamp for sampled flow magnitude.',
+      tune: 'Lower it for stability on quick pointer gestures.',
+    },
+    {
+      name: 'responseGamma',
+      role: 'Curve applied to normalized flow response.',
+      tune: 'Higher values make weak flow quieter and strong flow more selective.',
+    },
+    {
+      name: 'depthAttenuationScale',
+      role: 'How depth reduces influence in 3D layouts.',
+      tune: 'Raise when rear particles react too strongly.',
+    },
+  ]} />
+
+## 2D plane vs 3D cloud
+
+The 2D plane uses the same screen-space flow projection but keeps depth shaping
+off:
+
+```ts
+particles.step({
+  mode: 'plane2d',
+  depthLift: 0,
+  perpendicularAngle: 0,
+  sideVariation: 0,
+})
+```
+
+The 3D cloud starts particles on a sphere-like layout and uses extra controls
+to make a 2D flow texture feel volumetric.
+
+```ts
+particles.step({
+  mode: 'cloud3d',
+  depthLift: 0.65,
+  perpendicularAngle: 0.75,
+  sideVariation: 0.35,
+})
+```
+
+`depthLift` adds motion along depth. `perpendicularAngle` introduces side motion
+around the screen-flow direction. `sideVariation` varies that side motion per
+particle so the cloud does not move as one flat sheet.
+
+## Which particle path should you use?
+
+Use procedural particles when:
+
+- The final shape is more important than physical continuity.
+- You want a knot, mask, surface, text shape, or field to react to the brush.
+- You want fewer moving parts and no persistent particle state.
+
+Use GPGPU particles when:
+
+- The particles should carry momentum between frames.
+- You need a cloud, dust, sparks, confetti, or a sheet that drifts and settles.
+- You want spring, damping, drag, and flow-response controls.
+
+<ExampleEmbed
+  src="/examples/glsl/full/particles-trefoil/?demo=1"
+  title="Procedural trefoil particles"
+  caption="Procedural particles sample the fluid and displace a render-time shape."
+/>
+
+<ExampleEmbed
+  src="/examples/glsl/full/particles-2d/?demo=1"
+  title="GPGPU particles 2D"
+  caption="The 2D GPGPU example stores position and velocity in textures."
+/>
+
+<ExampleEmbed
+  src="/examples/glsl/full/particles-3d/?demo=1"
+  title="GPGPU particles 3D"
+  caption="The 3D example uses the same flow contract with depth shaping."
+/>

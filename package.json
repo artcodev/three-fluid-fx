@@ -1,0 +1,103 @@
+{
+  "name": "three-fluid-fx",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Cursor-driven fluid simulation and effects for three.js.",
+  "author": "Artem Korenevych <https://artcreativecode.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artcodev/three-fluid-fx.git"
+  },
+  "homepage": "https://github.com/artcodev/three-fluid-fx#readme",
+  "bugs": {
+    "url": "https://github.com/artcodev/three-fluid-fx/issues"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist-lib/glsl/",
+    "dist-lib/shared/",
+    "dist-lib/tsl/",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "keywords": [
+    "fluid-cursor",
+    "fluid-simulation",
+    "fluid-effect",
+    "stable-fluids",
+    "navier-stokes",
+    "three",
+    "threejs",
+    "three.js",
+    "webgl",
+    "shader",
+    "ink-trail",
+    "distortion",
+    "screen-distortion",
+    "particles",
+    "gpgpu",
+    "vfx",
+    "visual-effects",
+    "interactive",
+    "cursor-effect",
+    "trail"
+  ],
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1 --port 4321",
+    "build": "tsc --noEmit && astro build",
+    "build:lib": "pnpm build:lib:glsl && pnpm build:lib:tsl && tsc -p tsconfig.lib.json && node scripts/fix-dts-extensions.mjs",
+    "build:lib:glsl": "vite build --config vite.lib.glsl.config.ts",
+    "build:lib:tsl": "vite build --config vite.lib.tsl.config.ts",
+    "build:examples-js": "rm -rf examples-js && tsc -p tsconfig.examples-js.json && prettier --write 'examples-js/**/*.js' --log-level warn",
+    "build:js": "pnpm build:examples-js",
+    "check:examples-js": "pnpm build:examples-js && git diff --exit-code -- examples-js",
+    "check:demo-bundle": "node scripts/check-demo-bundle-size.mjs",
+    "docs:dev": "pnpm dev",
+    "docs:build": "astro build",
+    "docs:preview": "pnpm preview",
+    "demo:record": "node scripts/record-demo.mjs",
+    "demo:stitch": "node scripts/stitch-demo.mjs",
+    "demo:reel": "node scripts/demo-reel.mjs",
+    "verify:render": "node scripts/verify-render.mjs",
+    "prepublishOnly": "pnpm build:lib",
+    "preview": "astro preview --host 127.0.0.1 --port 4322"
+  },
+  "main": "./dist-lib/glsl/three-fluid-fx.cjs",
+  "module": "./dist-lib/glsl/three-fluid-fx.es.js",
+  "types": "./dist-lib/glsl/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/glsl/index.d.ts",
+      "import": "./dist-lib/glsl/three-fluid-fx.es.js",
+      "require": "./dist-lib/glsl/three-fluid-fx.cjs"
+    },
+    "./tsl": {
+      "types": "./dist-lib/tsl/index.d.ts",
+      "import": "./dist-lib/tsl/three-fluid-fx.es.js",
+      "require": "./dist-lib/tsl/three-fluid-fx.cjs"
+    }
+  },
+  "peerDependencies": {
+    "three": ">=0.183.0"
+  },
+  "dependencies": {
+    "@types/three": "^0.183.1"
+  },
+  "devDependencies": {
+    "@astrojs/mdx": "^5.0.4",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.2.4",
+    "@tweakpane/core": "^2.0.5",
+    "@types/node": "^22.19.15",
+    "astro": "^6.3.1",
+    "playwright": "^1.57.0",
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.2.4",
+    "three": "^0.183.2",
+    "tweakpane": "^4.0.5",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

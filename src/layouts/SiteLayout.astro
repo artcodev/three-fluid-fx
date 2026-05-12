@@ -1,0 +1,41 @@
+---
+import Analytics from '../components/site/Analytics.astro'
+import SiteFooter from '../components/site/SiteFooter.astro'
+import SiteHeader from '../components/site/SiteHeader.astro'
+import SiteMenu from '../components/site/SiteMenu.astro'
+import '../styles.css'
+import '../styles/site.css'
+
+interface Props {
+  title?: string
+  description?: string
+  active?: 'examples' | 'tutorials'
+}
+
+const {
+  title = 'three-fluid-fx',
+  description = 'Drop-in fluid simulation, overlays, distortion and particle displacement for three.js.',
+  active = 'examples',
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <Analytics />
+  </head>
+  <body class="page-bg">
+    <SiteMenu active={active} />
+    <div class="site-shell">
+      <SiteHeader active={active} />
+      <main class="site-main">
+        <slot />
+      </main>
+      <SiteFooter />
+    </div>
+  </body>
+</html>

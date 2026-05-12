@@ -1,0 +1,231 @@
+---
+title: "Getting Started"
+description: "A compact integration path for the solver, pointer splats, outputs, resize handling, and the parameters you actually tune."
+section: "Start"
+order: 1
+badge: "Core API"
+---
+
+import Callout from '../../components/tutorials/Callout.astro'
+import ExampleEmbed from '../../components/tutorials/ExampleEmbed.astro'
+import FlowDiagram from '../../components/tutorials/FlowDiagram.astro'
+import ParameterTable from '../../components/tutorials/ParameterTable.astro'
+import TextureChannels from '../../components/tutorials/TextureChannels.astro'
+
+`three-fluid-fx` is not a visual preset engine. It gives you a small fluid
+field that can be sampled from three.js. The field is usually driven by pointer
+movement, then consumed by an overlay, a distortion pass, or your own particle
+system.
+
+<FlowDiagram steps={['pointer movement', 'fluid splats', 'simulation step', 'textures or nodes', 'your visual effect']} />
+
+## The smallest useful integration
+
+Create a renderer, create the fluid simulation, attach pointer splats, and step
+the solver in the render loop.
+
+```ts
+import { WebGLRenderer, Timer } from 'three'
+import { attachPointerSplats, FluidSimulation } from 'three-fluid-fx'
+
+const renderer = new WebGLRenderer({ antialias: true })
+const fluid = new FluidSimulation(renderer, {
+  profile: 'balanced',
+  splatRadius: 0.001,
+  splatForce: 6,
+})
+
+const detachPointer = attachPointerSplats(renderer.domElement, fluid)
+
+const clock = new Timer()
+renderer.setAnimationLoop(() => {
+  clock.update()
+  fluid.step(clock.getDelta())
+
+  // Render your scene, effect composer, custom shader, or particles here.
+})
+```
+
+<Callout title="What is important here">
+  The solver does not render anything by itself. `fluid.step(dt)` updates GPU
+  textures. Your render path decides how those textures become visible.
+</Callout>
+
+## Keep resize explicit
+
+The simulation uses internal render targets. Resize them with the canvas so the
+field keeps the same aspect ratio as the viewport.
+
+```ts
+function resize() {
+  const width = stage.clientWidth
+  const height = stage.clientHeight
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+
+  renderer.setPixelRatio(dpr)
+  renderer.setSize(width, height, false)
+  fluid.resize(width, height)
+}
+
+resize()
+window.addEventListener('resize', resize)
+```
+
+The profile controls the baseline render-target sizes. `resize()` reshapes
+those targets to match the viewport aspect. It does not change the selected
+profile.
+
+## What the library gives you
+
+The main output is not a mesh. It is a set of textures in the GLSL pipeline and
+matching `TextureNode`s in the TSL pipeline.
+
+<TextureChannels />
+
+For WebGPU/TSL, the names mirror the texture names:
+
+```ts
+fluid.velocityNode
+fluid.densityNode
+fluid.dyeNode
+```
+
+Use textures with WebGL materials and post-processing passes. Use nodes with
+`WebGPURenderer` and `RenderPipeline`.
+
+## Pointer splats
+
+Pointer splats are small impulses written into the velocity and density fields.
+The helper is intentionally thin: it reads `fluid.splatRadius` and
+`fluid.splatForce` every pointer event.
+
+```ts
+fluid.splatRadius = 0.0012
+fluid.splatForce = 8
+```
+
+You can also add splats manually. Coordinates are normalized from 0 to 1.
+
+```ts
+fluid.addSplat(0.5, 0.5, 120, 40, {
+  radius: 0.001,
+  color: [120, 40, 1],
+})
+```
+
+For colored ink effects, turn on the dye field and write `dyeColor` splats.
+
+```ts
+fluid.enableDye = true
+
+attachPointerSplats(renderer.domElement, fluid, {
+  coloredStrokes: true,
+})
+```
+
+Use `colorize` when the stroke color should be deterministic instead of random
+HSV cycling.
+
+```ts
+attachPointerSplats(renderer.domElement, fluid, {
+  colorize(dx, dy) {
+    const mag = Math.min(Math.hypot(dx, dy) / 80, 1)
+    return [Math.abs(dx) * 0.003 * mag, 0.08 * mag, Math.abs(dy) * 0.003 * mag]
+  },
+})
+```
+
+## Parameters that change the look
+
+You do not need to teach users the Stable Fluids algorithm. You do need to tell
+them which controls make a visual difference.
+
+<ParameterTable
+  rows={[
+    {
+      name: 'splatRadius',
+      role: 'Brush size in normalized UV units.',
+      tune: 'Small values make sharp streaks. Larger values make soft blobs, water surfaces, and smoke.',
+    },
+    {
+      name: 'splatForce',
+      role: 'Pointer motion gain before the splat is written into velocity.',
+      tune: 'Raise it for punchy smears and particles. Lower it for slow ink and glass.',
+    },
+    {
+      name: 'pressureIterations',
+      role: 'How much projection cleanup runs each step.',
+      tune: 'Higher values look tighter and cost more. Lower values relax outward and feel softer.',
+    },
+    {
+      name: 'curlStrength + enableVorticity',
+      role: 'Extra vortex energy added back into the field.',
+      tune: 'Use it for oil, smoke, chromatic, and ink. Disable it for clean trails.',
+    },
+    {
+      name: 'velocityDissipation',
+      role: 'How long motion remains alive.',
+      tune: 'Closer to 1 means motion keeps pushing. Lower values calm the field quickly.',
+    },
+    {
+      name: 'densityDissipation',
+      role: 'How long the visible density mask remains alive.',
+      tune: 'Closer to 1 gives long trails and persistent masks. Lower values make quick puffs.',
+    },
+    {
+      name: 'dyeDissipation',
+      role: 'How long colored per-stroke dye remains alive.',
+      tune: 'Set higher than density for watercolor and ink whose color outlives the motion.',
+    },
+    {
+      name: 'bfecc',
+      role: 'Sharper advection path.',
+      tune: 'Leave on for crisp trails. Turn off for softer diffusion when a style wants bloom.',
+    },
+    {
+      name: 'reflectWalls',
+      role: 'Whether flow bounces from the screen edges.',
+      tune: 'Use true when you want energy to stay on screen. Use false when smoke or ink should drift away.',
+    },
+  ]} />
+
+## Profiles
+
+Profiles pick the texture sizes and the default pressure iteration count at
+construction time.
+
+```ts
+new FluidSimulation(renderer, { profile: 'performance' }) // weak GPUs, small embeds
+new FluidSimulation(renderer, { profile: 'balanced' })    // default
+new FluidSimulation(renderer, { profile: 'quality' })     // hero visuals, capture
+```
+
+Individual options still override the selected profile.
+
+```ts
+const fluid = new FluidSimulation(renderer, {
+  profile: 'balanced',
+  pressureIterations: 8,
+})
+```
+
+## Pick the render path
+
+Use the same solver for every visual family.
+
+```ts
+// Overlay: add density, dye, or velocity color over the scene.
+scene.rgb + color * density * intensity
+
+// Distortion: use fluid flow to shift scene UVs.
+texture2D(tDiffuse, uv - fluid.rg * intensity)
+
+// Particles: sample velocity at each particle screen position.
+particleAcceleration += velocityField.xy * flowStrength
+```
+
+<ExampleEmbed
+  src="/examples/glsl/minimal/helloworld/"
+  title="Hello World fluid density example"
+  caption="The Hello World WebGL example renders density directly so the field is visible."
+/>

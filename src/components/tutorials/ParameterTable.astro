@@ -1,0 +1,35 @@
+---
+interface Row {
+  name: string
+  role: string
+  tune: string
+}
+
+interface Props {
+  rows: Row[]
+}
+
+const { rows } = Astro.props
+---
+
+<table class="param-table">
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>What it controls</th>
+      <th>How to tune it</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      rows.map((row) => (
+        <tr>
+          <td><code>{row.name}</code></td>
+          <td>{row.role}</td>
+          <td>{row.tune}</td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+

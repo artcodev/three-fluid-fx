@@ -1,0 +1,19 @@
+---
+interface Props {
+  active?: 'examples' | 'tutorials'
+}
+
+const { active } = Astro.props
+---
+
+<header class="site-header">
+  <a class="site-brand" href="/">
+    <span>three-fluid-fx</span>
+    <strong>Cursor-driven fluid effects</strong>
+  </a>
+  <nav class="site-nav" aria-label="Site navigation">
+    <a aria-current={active === 'examples' ? 'page' : undefined} href="/">Examples</a>
+    <a aria-current={active === 'tutorials' ? 'page' : undefined} href="/tutorials/">Tutorials</a>
+    <a href="https://github.com/artcodev/three-fluid-fx">GitHub</a>
+  </nav>
+</header>

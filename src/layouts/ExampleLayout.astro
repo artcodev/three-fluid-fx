@@ -1,0 +1,109 @@
+---
+import type { ExampleEntry } from '../data/examples'
+import Analytics from '../components/site/Analytics.astro'
+import SiteMenu from '../components/site/SiteMenu.astro'
+import {
+  formatEngine,
+  formatLevel,
+  getExampleGroup,
+  getExampleGroupLabel,
+  getExampleGroupLinks,
+} from '../data/examples'
+import '../styles.css'
+import '../styles/site.css'
+
+interface Props {
+  entry: ExampleEntry
+}
+
+const { entry } = Astro.props
+const group = getExampleGroup(entry)
+const groupLabel = getExampleGroupLabel(entry)
+const groupLinks = getExampleGroupLinks(entry)
+const title = `${entry.title} - ${formatEngine(entry.engine)} ${formatLevel(entry.level)}`
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={entry.description} />
+    <Analytics />
+  </head>
+  <body>
+    <SiteMenu active="examples" currentExample={entry} />
+    <div class="app-shell">
+      <nav class="nav-stack" aria-label="Example navigation">
+        <a class="nav-primary" href="/">← Examples</a>
+        <div class="nav-row">
+          <span class="nav-label">Guides:</span>
+          <a href={entry.guideHref}>{entry.guideLabel}</a>
+          <span class="nav-sep">/</span>
+          <a href="/tutorials/glsl-vs-tsl/">GLSL vs TSL</a>
+        </div>
+        <div class="nav-row">
+          <span class="nav-label">Walkthrough:</span>
+          <a href={entry.walkthroughHref}>Demo tutorial</a>
+        </div>
+        <div class="nav-row">
+          <span class="nav-label">Source:</span>
+          {entry.source.js && <a href={entry.source.js}>JavaScript</a>}
+          {entry.source.js && <span class="nav-sep">/</span>}
+          <a href={entry.source.ts}>TypeScript</a>
+        </div>
+      </nav>
+
+      <div class="example-switcher-shell">
+        <div class="example-switcher-header">
+          <span class="example-group-label">{groupLabel}:</span>
+          <details class="example-group-menu">
+            <summary>Get More <span aria-hidden="true">&gt;</span></summary>
+            <div class="example-group-menu-panel">
+              {
+                groupLinks.map((item) =>
+                  item.current ? (
+                    <span class="is-current" aria-current="true">{item.label}</span>
+                  ) : (
+                    <a href={item.href}>{item.label}</a>
+                  ),
+                )
+              }
+            </div>
+          </details>
+        </div>
+
+        <div class="example-switcher" aria-label={groupLabel}>
+          {
+            group.map((item) =>
+              item.slug === entry.slug ? (
+                <span class="toggle is-active" aria-current="page">{item.shortTitle}</span>
+              ) : (
+                <a class="toggle" href={`/examples/${item.slug}/`}>{item.shortTitle}</a>
+              ),
+            )
+          }
+        </div>
+      </div>
+
+      <header class="topbar">
+        <p class="eyebrow">{entry.eyebrow}</p>
+        <h1>{entry.title}</h1>
+      </header>
+
+      <main
+        id="stage"
+        class="stage"
+        data-example-slug={entry.slug}
+        aria-label={entry.stageLabel}
+      >
+      </main>
+    </div>
+    <script>
+      import { initExamplePage } from '../scripts/example-pages.ts'
+
+      initExamplePage()
+    </script>
+  </body>
+</html>

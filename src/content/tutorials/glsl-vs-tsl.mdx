@@ -1,0 +1,173 @@
+---
+title: "GLSL vs TSL"
+description: "The same fluid concepts in two render pipelines: WebGL EffectComposer passes and WebGPU RenderPipeline nodes."
+section: "Pipeline choice"
+order: 4
+badge: "WebGL and WebGPU"
+---
+
+import Callout from '../../components/tutorials/Callout.astro'
+import FlowDiagram from '../../components/tutorials/FlowDiagram.astro'
+import ParameterTable from '../../components/tutorials/ParameterTable.astro'
+
+The library has two public entries because three.js now has two practical
+rendering paths.
+
+```ts
+import { FluidSimulation } from 'three-fluid-fx'     // WebGL / GLSL
+import { FluidSimulation } from 'three-fluid-fx/tsl' // WebGPU / TSL
+```
+
+The solver surface is intentionally similar. The composition layer is what
+changes.
+
+## WebGL / GLSL
+
+Use the default `three-fluid-fx` entry when your project uses
+`WebGLRenderer`, `EffectComposer`, and post-processing passes.
+
+<FlowDiagram steps={['scene', 'RenderPass', 'FluidEffectPass', 'OutputPass', 'screen']} />
+
+```ts
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { FluidSimulation, OilOverlayPass } from 'three-fluid-fx'
+
+const fluid = new FluidSimulation(renderer)
+const overlay = new OilOverlayPass(fluid)
+
+const composer = new EffectComposer(renderer)
+composer.addPass(new RenderPass(scene, camera))
+composer.addPass(overlay)
+composer.addPass(new OutputPass())
+
+renderer.setAnimationLoop(() => {
+  fluid.step(1 / 60)
+  overlay.time = clock.getElapsed()
+  composer.render()
+})
+```
+
+Use this path when:
+
+- You already have a WebGL post-processing stack.
+- You want drop-in passes.
+- You need the widest browser compatibility.
+
+## WebGPU / TSL
+
+Use `three-fluid-fx/tsl` when your project uses `WebGPURenderer`,
+`RenderPipeline`, and TSL node graphs.
+
+<FlowDiagram steps={['scene pass node', 'fluid nodes', 'effect node', 'RenderPipeline', 'screen']} />
+
+```ts
+import { RenderPipeline, WebGPURenderer } from 'three/webgpu'
+import { pass, uniform } from 'three/tsl'
+import { FluidSimulation, oilOverlay } from 'three-fluid-fx/tsl'
+
+const renderer = new WebGPURenderer({ antialias: true, forceWebGL: false })
+await renderer.init()
+
+const fluid = new FluidSimulation(renderer)
+const sceneNode = pass(scene, camera)
+const time = uniform(0)
+
+const pipeline = new RenderPipeline(renderer)
+pipeline.outputNode = oilOverlay(
+  sceneNode,
+  fluid.densityNode,
+  fluid.dyeNode,
+  fluid.velocityNode,
+  { time },
+)
+
+renderer.setAnimationLoop(() => {
+  time.value = clock.getElapsed()
+  fluid.step(1 / 60)
+  pipeline.render()
+})
+```
+
+Use this path when:
+
+- You are already building with WebGPU and TSL.
+- You want composition as a node graph.
+- Your target browser/runtime has WebGPU.
+
+## Concept mapping
+
+<ParameterTable
+  rows={[
+    {
+      name: 'FluidSimulation',
+      role: 'Same conceptual solver in both entries.',
+      tune: 'GLSL uses WebGL render targets. TSL uses a WGSL-backed implementation and StorageTexture outputs.',
+    },
+    {
+      name: 'attachPointerSplats',
+      role: 'Same pointer helper for both pipelines.',
+      tune: 'It depends only on splatForce and addSplat, not on a concrete class.',
+    },
+    {
+      name: 'velocityTexture / velocityNode',
+      role: 'Fluid output for downstream motion.',
+      tune: 'Use texture in WebGL shaders. Use node in TSL graphs.',
+    },
+    {
+      name: 'densityTexture / densityNode',
+      role: 'Visual flow plus density mask.',
+      tune: 'Most overlays and distortions read this output.',
+    },
+    {
+      name: 'Pass classes / node functions',
+      role: 'Composition API.',
+      tune: 'GLSL exports classes like OilOverlayPass. TSL exports functions like oilOverlay().',
+    },
+  ]} />
+
+## Style switching
+
+In WebGL, create pass instances and toggle `enabled`.
+
+```ts
+const passes = {
+  oil: new OilOverlayPass(fluid),
+  smoke: new SmokeOverlayPass(fluid),
+}
+
+for (const pass of Object.values(passes)) composer.addPass(pass)
+
+function setStyle(style: keyof typeof passes) {
+  for (const pass of Object.values(passes)) pass.enabled = false
+  passes[style].enabled = true
+}
+```
+
+In TSL, rebuild the output node when the selected style changes.
+
+```ts
+function setStyle(style: FluidOverlayStyle) {
+  setPipelineOutput(
+    pipeline,
+    fluidOverlay(style, sceneNode, fluid.densityNode, fluid.dyeNode, fluid.velocityNode, options),
+  )
+}
+```
+
+## Parameter semantics stay the same
+
+The visual tuning words do not change between GLSL and TSL:
+
+- `splatRadius` is still brush size.
+- `splatForce` is still pointer force.
+- `curlStrength` still adds vortex energy when `enableVorticity` is on.
+- `densityDissipation` still controls the mask lifetime.
+- `dyeDissipation` still controls colored stroke lifetime.
+- `intensity`, `vibrance`, and `time` still belong to the visual effect.
+
+<Callout title="Do not write two separate tutorials for every effect">
+  Explain each effect once by visual task and parameter semantics. Then show the
+  small GLSL/TSL API shape difference in this mapping page.
+</Callout>

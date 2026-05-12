@@ -1,0 +1,21 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content'
+import TutorialLayout from '../../layouts/TutorialLayout.astro'
+
+export async function getStaticPaths() {
+  const entries = await getCollection('tutorials')
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }))
+}
+
+const { entry } = Astro.props as { entry: CollectionEntry<'tutorials'> }
+const tutorials = (await getCollection('tutorials')).sort((a, b) => a.data.order - b.data.order)
+const { Content, headings } = await render(entry)
+---
+
+<TutorialLayout entry={entry} tutorials={tutorials} headings={headings}>
+  <Content />
+</TutorialLayout>
+

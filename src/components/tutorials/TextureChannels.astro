@@ -1,0 +1,52 @@
+---
+interface Row {
+  output: string
+  channels: string
+  use: string
+}
+
+const rows: Row[] = [
+  {
+    output: 'fluid.velocityTexture',
+    channels: '.xy',
+    use: 'Post-advection velocity. Use it for particle systems and downstream motion.',
+  },
+  {
+    output: 'fluid.velocityProjectedTexture',
+    channels: '.xy',
+    use: 'Projection-clean velocity before self-advection. Use it for cleaner velocity visualizations.',
+  },
+  {
+    output: 'fluid.densityTexture',
+    channels: '.rg + .b',
+    use: 'Display-space smeared flow in RG and density mask in B. Distortion and most overlays use this.',
+  },
+  {
+    output: 'fluid.dyeTexture',
+    channels: '.rgb',
+    use: 'Per-stroke color. Requires fluid.enableDye = true and dyeColor splats.',
+  },
+]
+---
+
+<table class="channel-table">
+  <thead>
+    <tr>
+      <th>Output</th>
+      <th>Channels</th>
+      <th>Use it for</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      rows.map((row) => (
+        <tr>
+          <td><code>{row.output}</code></td>
+          <td><code>{row.channels}</code></td>
+          <td>{row.use}</td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+

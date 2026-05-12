@@ -1,0 +1,9 @@
+node_modules
+.astro
+dist
+dist-docs
+.DS_Store
+demo-output
+*.tsbuildinfo
+src/core/**/*.js
+.claude/

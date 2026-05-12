@@ -1,0 +1,21 @@
+---
+interface Props {
+  steps: string[]
+}
+
+const { steps } = Astro.props
+---
+
+<div class="diagram" role="img" aria-label={steps.join(' to ')}>
+  <div class="diagram-row">
+    {
+      steps.map((step, index) => (
+        <>
+          <span class="diagram-node">{step}</span>
+          {index < steps.length - 1 && <span class="diagram-arrow">to</span>}
+        </>
+      ))
+    }
+  </div>
+</div>
+

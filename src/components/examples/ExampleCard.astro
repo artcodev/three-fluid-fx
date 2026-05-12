@@ -1,0 +1,78 @@
+---
+import type { ExampleCaseSummary } from '../../data/examples'
+import { getExamplesByCase } from '../../data/examples'
+
+interface Props {
+  item: ExampleCaseSummary
+}
+
+const { item } = Astro.props
+const entries = getExamplesByCase(item.id)
+const minimalEntries = entries.filter((e) => e.level === 'minimal')
+const fullEntries = entries.filter((e) => e.level === 'full')
+---
+
+<article class={`example-card example-card-${item.id}`}>
+  <a href={`/examples/${entries[0]?.slug}/`} class="example-card-preview" aria-label={`View ${item.title}`}>
+    <img src={`/assets/previews/fx-example-${item.id}.png`} alt="" class="preview-media preview-image" loading="lazy" />
+    <video src={`/assets/previews/fx-example-${item.id}.mp4`} class="preview-media preview-video" loop muted playsinline preload="none"></video>
+    <div class="example-card-preview-overlay">
+      {item.badge && <span class="example-badge">{item.badge}</span>}
+      <h3>{item.title}</h3>
+    </div>
+  </a>
+  <div class="example-card-body">
+    <p class="example-card-description">{item.description}</p>
+    <div class="example-actions-grid">
+      {
+        minimalEntries.length > 0 && (
+          <div class="action-group">
+            <span class="action-group-label">Minimal</span>
+            <div class="action-pills">
+              {minimalEntries.map((entry) => (
+                <a href={`/examples/${entry.slug}/`} class="pill" title={entry.cardDescription}>
+                  {entry.engine === 'glsl' ? 'WebGL / GLSL' : 'WebGPU / TSL'}
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      {
+        fullEntries.length > 0 && (
+          <div class="action-group">
+            <span class="action-group-label">Full</span>
+            <div class="action-pills">
+              {fullEntries.map((entry) => (
+                <a href={`/examples/${entry.slug}/`} class="pill" title={entry.cardDescription}>
+                  {entry.engine === 'glsl' ? 'WebGL / GLSL' : 'WebGPU / TSL'}
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</article>
+
+<script>
+  const cards = document.querySelectorAll('.example-card')
+  cards.forEach((card) => {
+    const video = card.querySelector('.preview-video') as HTMLVideoElement
+    if (!video) return
+
+    card.addEventListener('mouseenter', () => {
+      video.play().then(() => {
+        card.classList.add('is-hovered')
+      }).catch(() => {
+        // Browser might block autoplay without interaction, ignore silently
+      })
+    })
+
+    card.addEventListener('mouseleave', () => {
+      card.classList.remove('is-hovered')
+      video.pause()
+    })
+  })
+</script>
