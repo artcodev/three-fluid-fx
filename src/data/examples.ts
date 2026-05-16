@@ -30,6 +30,13 @@ export interface ExampleEntry {
     ts: string
     js?: string
   }
+  playgroundLinks: ExamplePlaygroundLink[]
+  javascriptPlaygroundLinks: ExamplePlaygroundLink[]
+}
+
+export interface ExamplePlaygroundLink {
+  label: 'CodeSandbox' | 'StackBlitz' | 'Gitpod' | 'GitHub.dev'
+  href: string
 }
 
 export interface ExampleCaseSummary {
@@ -50,7 +57,11 @@ export interface ExampleGroupLink extends ExampleGroupMeta {
   current: boolean
 }
 
-const REPO = 'https://github.com/artcodev/three-fluid-fx/blob/main'
+const REPO_OWNER = 'artcodev'
+const REPO_NAME = 'three-fluid-fx'
+const REPO_BRANCH = 'main'
+const REPO_ROOT = `https://github.com/${REPO_OWNER}/${REPO_NAME}`
+const REPO = `${REPO_ROOT}/blob/${REPO_BRANCH}`
 
 export const exampleGroups: ExampleGroupMeta[] = [
   { engine: 'tsl', level: 'minimal', label: 'Minimal TSL Examples' },
@@ -82,7 +93,8 @@ const caseSummaries: ExampleCaseSummary[] = [
   {
     id: 'particles-2d',
     title: 'GPGPU Particles 2D',
-    description: 'Interactive, 3D-shaded liquid droplets driven by GPGPU velocity advection, springs, and drag.',
+    description:
+      'Interactive, 3D-shaded liquid droplets driven by GPGPU velocity advection, springs, and drag.',
   },
   {
     id: 'particles-3d',
@@ -171,18 +183,21 @@ const caseMeta: Record<
 const descriptions: Record<ExampleCase, string> = {
   helloworld: 'Density rendered straight to screen.',
   overlay: 'Vibrant fluid paint and neon dye strokes composited over your scene.',
-  distortion: 'Realistic screen-space refraction, warping typography and objects using fluid momentum.',
+  distortion:
+    'Realistic screen-space refraction, warping typography and objects using fluid momentum.',
   'particles-trefoil':
     "A procedural 3D knot dynamically stretched and displaced by the fluid's velocity field.",
-  'particles-2d':
-    'Thousands of procedural 3D liquid droplets driven by a massive GPGPU swarm.',
+  'particles-2d': 'Thousands of procedural 3D liquid droplets driven by a massive GPGPU swarm.',
   'particles-3d':
     'A volumetric GPGPU particle cloud that lifts and swirls in 3D space based on 2D fluid winds.',
   combined: 'A full TSL/WebGPU composition that combines the main effect families.',
   mega: 'A hero-style TSL/WebGPU composition with centered morphing particles and fluid post-processing.',
 }
 
-const cardDescriptions: Record<ExampleCase, Record<ExampleEngine, Partial<Record<ExampleLevel, string>>>> = {
+const cardDescriptions: Record<
+  ExampleCase,
+  Record<ExampleEngine, Partial<Record<ExampleLevel, string>>>
+> = {
   helloworld: {
     glsl: {
       minimal: '~40 lines. No GUI, no scene: just the solver, resize, splats and density output.',
@@ -296,16 +311,70 @@ function makeEntry(
       ts: `${REPO}/examples/${slug}/main.ts`,
       js: hasJavaScriptSource ? `${REPO}/examples-js/${slug}/main.js` : undefined,
     },
+    playgroundLinks: makePlaygroundLinks(slug),
+    javascriptPlaygroundLinks: makePlaygroundLinks(slug, 'js'),
   }
+}
+
+function getPlaygroundId(slug: string): string {
+  return slug.replaceAll('/', '-')
+}
+
+function makePlaygroundLinks(
+  slug: string,
+  language: 'ts' | 'js' = 'ts',
+): ExamplePlaygroundLink[] {
+  const id = getPlaygroundId(slug)
+  const folder = language === 'ts' ? `playgrounds/${id}` : `playgrounds-js/${id}`
+  const sourcePath =
+    language === 'ts' ? `src/examples/${slug}/main.ts` : `src/examples-js/${slug}/main.js`
+  const githubTree = `${REPO_ROOT}/tree/${REPO_BRANCH}/${folder}`
+
+  return [
+    {
+      label: 'CodeSandbox',
+      href: `https://codesandbox.io/p/github/${REPO_OWNER}/${REPO_NAME}/${REPO_BRANCH}/${folder}?file=${encodeURIComponent(`/${sourcePath}`)}`,
+    },
+    {
+      label: 'StackBlitz',
+      href: `https://stackblitz.com/github/${REPO_OWNER}/${REPO_NAME}/tree/${REPO_BRANCH}/${folder}?file=${encodeURIComponent(sourcePath)}&startScript=dev`,
+    },
+    {
+      label: 'Gitpod',
+      href: `https://app.gitpod.io/#${githubTree}`,
+    },
+    {
+      label: 'GitHub.dev',
+      href: `https://github.dev/${REPO_OWNER}/${REPO_NAME}/blob/${REPO_BRANCH}/${folder}/${sourcePath}`,
+    },
+  ]
 }
 
 export const examples: ExampleEntry[] = [
   makeEntry('glsl', 'minimal', 'helloworld', 'Hello World', 'Example 00'),
   makeEntry('glsl', 'minimal', 'overlay', 'Overlay', 'Minimal · Overlay'),
   makeEntry('glsl', 'minimal', 'distortion', 'Distortion', 'Minimal · Distortion'),
-  makeEntry('glsl', 'minimal', 'particles-trefoil', 'Simple Particles', 'Minimal · Simple Particles'),
-  makeEntry('glsl', 'minimal', 'particles-2d', 'GPGPU Particles 2D', 'Minimal · GPGPU Particles 2D'),
-  makeEntry('glsl', 'minimal', 'particles-3d', 'GPGPU Particles 3D', 'Minimal · GPGPU Particles 3D'),
+  makeEntry(
+    'glsl',
+    'minimal',
+    'particles-trefoil',
+    'Simple Particles',
+    'Minimal · Simple Particles',
+  ),
+  makeEntry(
+    'glsl',
+    'minimal',
+    'particles-2d',
+    'GPGPU Particles 2D',
+    'Minimal · GPGPU Particles 2D',
+  ),
+  makeEntry(
+    'glsl',
+    'minimal',
+    'particles-3d',
+    'GPGPU Particles 3D',
+    'Minimal · GPGPU Particles 3D',
+  ),
 
   makeEntry('glsl', 'full', 'overlay', 'Overlay', 'Example 01'),
   makeEntry('glsl', 'full', 'distortion', 'Distortion', 'Example 02'),
@@ -316,13 +385,37 @@ export const examples: ExampleEntry[] = [
   makeEntry('tsl', 'minimal', 'helloworld', 'Hello World', 'TSL · Example 00'),
   makeEntry('tsl', 'minimal', 'overlay', 'Overlay', 'TSL · Minimal · Overlay'),
   makeEntry('tsl', 'minimal', 'distortion', 'Distortion', 'TSL · Minimal · Distortion'),
-  makeEntry('tsl', 'minimal', 'particles-trefoil', 'Simple Particles', 'TSL · Minimal · Simple Particles'),
-  makeEntry('tsl', 'minimal', 'particles-2d', 'GPGPU Particles 2D', 'TSL · Minimal · GPGPU Particles 2D'),
-  makeEntry('tsl', 'minimal', 'particles-3d', 'GPGPU Particles 3D', 'TSL · Minimal · GPGPU Particles 3D'),
+  makeEntry(
+    'tsl',
+    'minimal',
+    'particles-trefoil',
+    'Simple Particles',
+    'TSL · Minimal · Simple Particles',
+  ),
+  makeEntry(
+    'tsl',
+    'minimal',
+    'particles-2d',
+    'GPGPU Particles 2D',
+    'TSL · Minimal · GPGPU Particles 2D',
+  ),
+  makeEntry(
+    'tsl',
+    'minimal',
+    'particles-3d',
+    'GPGPU Particles 3D',
+    'TSL · Minimal · GPGPU Particles 3D',
+  ),
 
   makeEntry('tsl', 'full', 'overlay', 'Overlay', 'TSL · Example 01'),
   makeEntry('tsl', 'full', 'distortion', 'Distortion', 'Example 02 · TSL + WGSL'),
-  makeEntry('tsl', 'full', 'particles-trefoil', 'Simple Particles', 'TSL · Full · Simple Particles'),
+  makeEntry(
+    'tsl',
+    'full',
+    'particles-trefoil',
+    'Simple Particles',
+    'TSL · Full · Simple Particles',
+  ),
   makeEntry('tsl', 'full', 'particles-2d', 'GPGPU Particles 2D', 'TSL · Example 03'),
   makeEntry('tsl', 'full', 'particles-3d', 'GPGPU Particles 3D', 'TSL · Example 04'),
   makeEntry('tsl', 'full', 'combined', 'Combined Demo', 'TSL · Full · Combined'),

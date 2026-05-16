@@ -53,6 +53,34 @@ const title = `${entry.title} - ${formatEngine(entry.engine)} ${formatLevel(entr
           {entry.source.js && <span class="nav-sep">/</span>}
           <a href={entry.source.ts}>TypeScript</a>
         </div>
+        <div class="nav-row nav-open-row">
+          <span class="nav-label">Open example in:</span>
+          <details class="nav-open-menu">
+            <summary>CodeSandbox + more <span aria-hidden="true">&gt;</span></summary>
+            <div class="nav-open-menu-panel">
+              <div class="nav-open-group">
+                <span class="nav-open-group-title">JS</span>
+                <div class="nav-open-group-links">
+                  {
+                    entry.javascriptPlaygroundLinks.map((link) => (
+                      <a href={link.href} target="_blank" rel="noreferrer">{link.label}</a>
+                    ))
+                  }
+                </div>
+              </div>
+              <div class="nav-open-group">
+                <span class="nav-open-group-title">TS</span>
+                <div class="nav-open-group-links">
+                  {
+                    entry.playgroundLinks.map((link) => (
+                      <a href={link.href} target="_blank" rel="noreferrer">{link.label}</a>
+                    ))
+                  }
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
       </nav>
 
       <div class="example-switcher-shell">

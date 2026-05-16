@@ -51,6 +51,7 @@
     "build:lib:glsl": "vite build --config vite.lib.glsl.config.ts",
     "build:lib:tsl": "vite build --config vite.lib.tsl.config.ts",
     "build:examples-js": "rm -rf examples-js && tsc -p tsconfig.examples-js.json && prettier --write 'examples-js/**/*.js' --log-level warn",
+    "build:playgrounds": "pnpm build:examples-js && node scripts/build-playgrounds.mjs",
     "build:js": "pnpm build:examples-js",
     "check:examples-js": "pnpm build:examples-js && git diff --exit-code -- examples-js",
     "check:demo-bundle": "node scripts/check-demo-bundle-size.mjs",

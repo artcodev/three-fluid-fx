@@ -1,0 +1,155 @@
+import '../../../../styles.css'
+import {
+  ACESFilmicToneMapping,
+  Color,
+  Matrix3,
+  PerspectiveCamera,
+  Scene,
+  SRGBColorSpace,
+  Timer,
+  Vector3,
+} from 'three'
+import { WebGPURenderer } from 'three/webgpu'
+import { attachPointerSplats, FluidSimulation } from 'three-fluid-fx/tsl'
+import { SCALE } from '../../../extras/controls/paramRanges'
+import { createTrefoilParticles } from '../../../extras/particles/tsl/TrefoilParticles'
+import { resolveProfile } from '../../../extras/resolveProfile'
+
+const stage = document.getElementById('stage')
+if (!(stage instanceof HTMLElement)) throw new Error('Missing #stage element')
+
+if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+  stage.textContent =
+    'WebGPU is not available in this browser. The TSL example needs a WebGPU-capable browser.'
+  throw new Error('WebGPU unavailable')
+}
+
+const DEFAULTS = {
+  count: 4000,
+  tubeRadius: 0.3,
+  scale: 0.55,
+  pointSize: 6,
+  rotationSpeed: 0.2,
+  displacement: 1,
+  dispThreshold: 0.08,
+  dispRange: 0.3,
+  dragStrength: 0.1,
+  maxFlowSpeed: 10,
+  splatRadius: 25,
+  splatForce: 10,
+  pressureIterations: 15,
+  curlStrength: 0.2,
+  velocityDissipation: 0.99,
+  densityDissipation: 0.98,
+  pressureDissipation: 0.8,
+  enableVorticity: false,
+  bfecc: true,
+  reflectWalls: false,
+}
+
+const renderer = new WebGPURenderer({ antialias: true, forceWebGL: false })
+renderer.outputColorSpace = SRGBColorSpace
+renderer.toneMapping = ACESFilmicToneMapping
+renderer.toneMappingExposure = 1
+renderer.setClearColor(new Color('#07080b'), 1)
+renderer.domElement.style.position = 'absolute'
+renderer.domElement.style.inset = '0'
+stage.appendChild(renderer.domElement)
+
+await renderer.init()
+
+const scene = new Scene()
+const camera = new PerspectiveCamera(45, 1, 0.1, 100)
+camera.position.set(0, 0, 5.5)
+camera.updateMatrixWorld(true)
+
+const profile = resolveProfile('balanced')
+const fluid = new FluidSimulation(renderer, {
+  profile,
+  splatRadius: DEFAULTS.splatRadius * SCALE.splatRadius,
+  splatForce: DEFAULTS.splatForce,
+  pressureIterations: DEFAULTS.pressureIterations,
+  curlStrength: DEFAULTS.curlStrength,
+  velocityDissipation: DEFAULTS.velocityDissipation,
+  densityDissipation: DEFAULTS.densityDissipation,
+  pressureDissipation: DEFAULTS.pressureDissipation,
+  enableVorticity: DEFAULTS.enableVorticity,
+  bfecc: DEFAULTS.bfecc,
+  reflectWalls: DEFAULTS.reflectWalls,
+})
+attachPointerSplats(renderer.domElement, fluid)
+
+const trefoil = createTrefoilParticles(fluid.densityNode, {
+  count: DEFAULTS.count,
+  tubeRadius: DEFAULTS.tubeRadius,
+  scale: DEFAULTS.scale,
+  pointSize: DEFAULTS.pointSize,
+  displacement: DEFAULTS.displacement,
+  dispThreshold: DEFAULTS.dispThreshold,
+  dispRange: DEFAULTS.dispRange,
+  dragStrength: DEFAULTS.dragStrength,
+  maxFlowSpeed: DEFAULTS.maxFlowSpeed,
+})
+scene.add(trefoil.mesh)
+
+const resize = (): void => {
+  const w = Math.max(1, stage.clientWidth)
+  const h = Math.max(1, stage.clientHeight)
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  renderer.setPixelRatio(dpr)
+  renderer.setSize(w, h, false)
+  camera.aspect = w / h
+  camera.updateProjectionMatrix()
+  camera.updateMatrixWorld(true)
+  fluid.resize(w, h)
+}
+resize()
+window.addEventListener('resize', resize)
+
+const clock = new Timer()
+const cameraRight = new Vector3()
+const cameraUp = new Vector3()
+const modelRotation = new Matrix3()
+let spinAngle = 0
+
+renderer.setAnimationLoop(() => {
+  clock.update()
+  const frameDt = Math.min(Math.max(clock.getDelta(), 1e-6), 1 / 30)
+  const fluidDt = Math.min(frameDt, 1 / 60)
+
+  spinAngle += DEFAULTS.rotationSpeed * frameDt
+  trefoil.mesh.rotation.y = spinAngle
+  trefoil.mesh.updateMatrixWorld(true)
+  modelRotation.setFromMatrix4(trefoil.mesh.matrixWorld)
+
+  fluid.step(fluidDt)
+
+  camera.updateMatrixWorld()
+  cameraRight.setFromMatrixColumn(camera.matrixWorld, 0)
+  cameraUp.setFromMatrixColumn(camera.matrixWorld, 1)
+  trefoil.update({
+    cameraRight,
+    cameraUp,
+    modelRotation,
+    tubeRadius: DEFAULTS.tubeRadius,
+    scale: DEFAULTS.scale,
+    pointSize: DEFAULTS.pointSize,
+    displacement: DEFAULTS.displacement,
+    dispThreshold: DEFAULTS.dispThreshold,
+    dispRange: DEFAULTS.dispRange,
+    dragStrength: DEFAULTS.dragStrength,
+    maxFlowSpeed: DEFAULTS.maxFlowSpeed,
+  })
+
+  renderer.render(scene, camera)
+})
+
+window.addEventListener('pagehide', () => {
+  renderer.setAnimationLoop(null)
+  window.removeEventListener('resize', resize)
+  scene.remove(trefoil.mesh)
+  trefoil.dispose()
+  fluid.dispose()
+  renderer.dispose()
+  renderer.domElement.remove()
+})
