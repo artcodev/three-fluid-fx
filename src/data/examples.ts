@@ -333,7 +333,7 @@ function makePlaygroundLinks(
   return [
     {
       label: 'CodeSandbox',
-      href: `https://codesandbox.io/s/github/${REPO_OWNER}/${REPO_NAME}/tree/${REPO_BRANCH}/${folder}?file=${encodeURIComponent(`/${sourcePath}`)}`,
+      href: `/codesandbox/${language}/${id}.html`,
     },
     {
       label: 'StackBlitz',

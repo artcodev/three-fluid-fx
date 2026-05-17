@@ -1,20 +1,36 @@
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import LZString from 'lz-string'
 
 const rootDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const examplesDir = path.join(rootDir, 'examples')
 const examplesJsDir = path.join(rootDir, 'examples-js')
 const playgroundsDir = path.join(rootDir, 'playgrounds')
 const playgroundsJsDir = path.join(rootDir, 'playgrounds-js')
+const codeSandboxPagesDir = path.join(rootDir, 'public/codesandbox')
 const rootPackage = JSON.parse(await readFile(path.join(rootDir, 'package.json'), 'utf8'))
 
 const REPO_OWNER = 'artcodev'
 const REPO_NAME = 'three-fluid-fx'
 const BRANCH = 'main'
+const SITE_URL = rootPackage.homepage.replace(/\/$/, '')
+const CODE_SANDBOX_DEFINE_ENDPOINT = 'https://codesandbox.io/api/v1/sandboxes/define'
 
 const importSpecifierPattern =
   /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s*)?['"]([^'"]+)['"]/g
+
+const binaryExtensions = new Set([
+  '.avif',
+  '.gif',
+  '.ico',
+  '.jpeg',
+  '.jpg',
+  '.png',
+  '.webp',
+  '.woff',
+  '.woff2',
+])
 
 const titleByCase = {
   helloworld: 'Hello World',
@@ -87,6 +103,22 @@ function titleFromSlug(slug) {
   return `${caseTitle} ${engine.toUpperCase()} ${level}`
 }
 
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+}
+
+function codeSandboxParameters(parameters) {
+  return LZString.compressToBase64(JSON.stringify(parameters))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replace(/=+$/, '')
+}
+
 async function exists(filePath) {
   try {
     await stat(filePath)
@@ -124,6 +156,103 @@ async function copyDirectoryFiltered(sourceDir, targetDir) {
       await cp(source, target)
     }
   }
+}
+
+function encodeUrlPath(value) {
+  return value.split('/').map(encodeURIComponent).join('/')
+}
+
+function binaryFileUrl(relativeFile, item, spec) {
+  if (relativeFile.startsWith('public/')) {
+    return `${SITE_URL}/${encodeUrlPath(relativeFile.slice('public/'.length))}`
+  }
+
+  return `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${spec.outputFolder}/${item.id}/${encodeUrlPath(relativeFile)}`
+}
+
+async function codeSandboxFilesForPlayground(item, spec, outputDir) {
+  const files = {}
+  const filePaths = await walk(outputDir)
+
+  for (const filePath of filePaths) {
+    if (path.basename(filePath) === '.DS_Store') continue
+
+    const relativeFile = asPosix(path.relative(outputDir, filePath))
+    const isBinary = binaryExtensions.has(path.extname(filePath).toLowerCase())
+    files[relativeFile] = isBinary
+      ? {
+          content: binaryFileUrl(relativeFile, item, spec),
+          isBinary: true,
+        }
+      : {
+          content: await readFile(filePath, 'utf8'),
+          isBinary: false,
+        }
+  }
+
+  return files
+}
+
+async function writeCodeSandboxPage(item, spec, outputDir) {
+  const files = await codeSandboxFilesForPlayground(item, spec, outputDir)
+  const parameters = codeSandboxParameters({ files })
+  const action = `${CODE_SANDBOX_DEFINE_ENDPOINT}?${new URLSearchParams({
+    query: 'view=preview',
+  })}`
+  const pageDir = path.join(codeSandboxPagesDir, spec.language)
+  const pagePath = path.join(pageDir, `${item.id}.html`)
+
+  await mkdir(pageDir, { recursive: true })
+  await writeFile(
+    pagePath,
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Open ${escapeHtml(item.title)} in CodeSandbox</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      form {
+        display: grid;
+        gap: 16px;
+        max-width: 28rem;
+        padding: 24px;
+      }
+      p { margin: 0; line-height: 1.5; }
+      button {
+        width: fit-content;
+        border: 1px solid currentColor;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        padding: 10px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="codesandbox-form" action="${escapeHtml(action)}" method="POST">
+      <input type="hidden" name="parameters" value="${escapeHtml(parameters)}" />
+      <p>Opening ${escapeHtml(item.title)} in CodeSandbox.</p>
+      <button type="submit">Open CodeSandbox</button>
+    </form>
+    <script>
+      document.getElementById('codesandbox-form').submit()
+    </script>
+  </body>
+</html>
+`,
+  )
 }
 
 async function resolveRelativeModule(fromFile, specifier, spec) {
@@ -579,6 +708,7 @@ THREE_FLUID_FX_LOCAL=1 pnpm dev
 async function writePlayground({ slug, entryFile }, spec) {
   const id = playgroundIdFromSlug(slug)
   const title = titleFromSlug(slug)
+  const item = { id, slug, title }
   const outputDir = path.join(spec.outputDir, id)
   const srcDir = path.join(outputDir, 'src')
   const { files, usesBackdrops } = await collectDependencies(entryFile, spec)
@@ -614,7 +744,9 @@ async function writePlayground({ slug, entryFile }, spec) {
     )
   }
 
-  return { id, slug, title, files: files.length, usesBackdrops }
+  await writeCodeSandboxPage(item, spec, outputDir)
+
+  return { ...item, files: files.length, usesBackdrops }
 }
 
 async function discoverExamples(spec) {
@@ -634,9 +766,7 @@ function stackBlitzHref(item, spec) {
 }
 
 function codeSandboxHref(item, spec) {
-  const folder = `${spec.outputFolder}/${item.id}`
-  const file = encodeURIComponent(`/${`src/${spec.copiedSourceDir}/${item.slug}/main.${spec.extension}`}`)
-  return `https://codesandbox.io/s/github/${REPO_OWNER}/${REPO_NAME}/tree/${BRANCH}/${folder}?file=${file}`
+  return `${SITE_URL}/codesandbox/${spec.language}/${item.id}.html`
 }
 
 function rootReadmeForPlaygrounds(items, spec) {
@@ -678,6 +808,7 @@ async function buildPlaygrounds(spec) {
 }
 
 const counts = []
+await rm(codeSandboxPagesDir, { recursive: true, force: true })
 for (const spec of playgroundSpecs) {
   counts.push({ spec, count: await buildPlaygrounds(spec) })
 }
