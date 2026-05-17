@@ -636,7 +636,7 @@ function stackBlitzHref(item, spec) {
 function codeSandboxHref(item, spec) {
   const folder = `${spec.outputFolder}/${item.id}`
   const file = encodeURIComponent(`/${`src/${spec.copiedSourceDir}/${item.slug}/main.${spec.extension}`}`)
-  return `https://codesandbox.io/p/github/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${folder}?file=${file}`
+  return `https://codesandbox.io/s/github/${REPO_OWNER}/${REPO_NAME}/tree/${BRANCH}/${folder}?file=${file}`
 }
 
 function rootReadmeForPlaygrounds(items, spec) {

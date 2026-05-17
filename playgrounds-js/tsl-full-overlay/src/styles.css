@@ -175,6 +175,101 @@
   color: rgba(243, 240, 232, 0.3);
 }
 
+.nav-open-row {
+  position: relative;
+  z-index: 4;
+}
+
+.nav-open-menu {
+  position: relative;
+  padding: 0;
+}
+
+.nav-open-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(243, 240, 232, 0.9);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 750;
+  line-height: 1;
+  list-style: none;
+  padding: 4px 0;
+}
+
+.nav-open-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-open-menu[open] summary {
+  color: #fff6ef;
+}
+
+.nav-open-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -4px;
+  width: max-content;
+  min-width: 315px;
+  max-width: calc(100vw - 36px);
+  overflow: hidden;
+  border: 1px solid rgba(243, 240, 232, 0.14);
+  border-radius: 8px;
+  background: rgba(7, 8, 11, 0.93);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(16px);
+}
+
+.nav-open-group {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.nav-open-group + .nav-open-group {
+  border-top: 1px solid rgba(243, 240, 232, 0.1);
+}
+
+.nav-open-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(243, 240, 232, 0.05);
+  color: rgba(243, 240, 232, 0.56);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-open-group-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 5px;
+}
+
+.nav-open-group-links a {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border-radius: 5px;
+  color: rgba(243, 240, 232, 0.82);
+  font-size: 12px;
+  font-weight: 740;
+  line-height: 1;
+  padding: 0 9px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav-open-group-links a:hover {
+  background: rgba(68, 190, 180, 0.13);
+  color: #fff6ef;
+  text-decoration: none;
+}
+
 .topbar h1 {
   margin: 2px 0 0;
   text-align: center;
@@ -467,6 +562,25 @@
 
   .nav-label {
     font-size: 9px;
+  }
+
+  .nav-open-menu summary {
+    font-size: 10.5px;
+  }
+
+  .nav-open-menu-panel {
+    min-width: min(315px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .nav-open-group {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .nav-open-group-links a {
+    min-height: 29px;
+    font-size: 11px;
+    padding: 0 8px;
   }
 
   .topbar h1 {
