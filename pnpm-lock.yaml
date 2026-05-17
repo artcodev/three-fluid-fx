@@ -30,9 +30,6 @@ importers:
       astro:
         specifier: ^6.3.1
         version: 6.3.1(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.2)
-      lz-string:
-        specifier: ^1.5.0
-        version: 1.5.0
       playwright:
         specifier: ^1.57.0
         version: 1.59.1
@@ -1240,10 +1237,6 @@ packages:
   lru-cache@11.3.6:
     resolution: {integrity: sha512-Gf/KoL3C/MlI7Bt0PGI9I+TeTC/I6r/csU58N4BSNc4lppLBeKsOdFYkK+dX0ABDUMJNfCHTyPpzwwO21Awd3A==}
     engines: {node: 20 || >=22}
-
-  lz-string@1.5.0:
-    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
-    hasBin: true
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -3078,8 +3071,6 @@ snapshots:
   longest-streak@3.1.0: {}
 
   lru-cache@11.3.6: {}
-
-  lz-string@1.5.0: {}
 
   magic-string@0.30.21:
     dependencies:

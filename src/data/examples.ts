@@ -35,7 +35,7 @@ export interface ExampleEntry {
 }
 
 export interface ExamplePlaygroundLink {
-  label: 'CodeSandbox' | 'StackBlitz' | 'Gitpod' | 'GitHub.dev'
+  label: 'StackBlitz'
   href: string
 }
 
@@ -328,24 +328,11 @@ function makePlaygroundLinks(
   const folder = language === 'ts' ? `playgrounds/${id}` : `playgrounds-js/${id}`
   const sourcePath =
     language === 'ts' ? `src/examples/${slug}/main.ts` : `src/examples-js/${slug}/main.js`
-  const githubTree = `${REPO_ROOT}/tree/${REPO_BRANCH}/${folder}`
 
   return [
     {
-      label: 'CodeSandbox',
-      href: `/codesandbox/${language}/${id}.html`,
-    },
-    {
       label: 'StackBlitz',
       href: `https://stackblitz.com/github/${REPO_OWNER}/${REPO_NAME}/tree/${REPO_BRANCH}/${folder}?file=${encodeURIComponent(sourcePath)}&startScript=dev`,
-    },
-    {
-      label: 'Gitpod',
-      href: `https://app.gitpod.io/#${githubTree}`,
-    },
-    {
-      label: 'GitHub.dev',
-      href: `https://github.dev/${REPO_OWNER}/${REPO_NAME}/blob/${REPO_BRANCH}/${folder}/${sourcePath}`,
     },
   ]
 }
