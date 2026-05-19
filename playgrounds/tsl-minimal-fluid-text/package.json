@@ -1,0 +1,29 @@
+{
+  "name": "three-fluid-fx-playground-tsl-minimal-fluid-text",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@tweakpane/core": "^2.0.5",
+    "three": "^0.183.2",
+    "three-fluid-fx": "^0.1.0",
+    "tweakpane": "^4.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.2.4",
+    "tailwindcss": "^4.2.4",
+    "vite": "^7.3.1",
+    "@types/node": "^22.19.15",
+    "@types/three": "^0.183.1",
+    "typescript": "^5.9.3"
+  },
+  "stackblitz": {
+    "title": "Fluid Text TSL minimal (TypeScript)",
+    "startCommand": "npm run dev"
+  }
+}

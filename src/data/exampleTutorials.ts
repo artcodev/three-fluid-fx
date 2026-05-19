@@ -543,6 +543,67 @@ const caseTutorials: Record<ExampleCase, CaseTutorial> = {
       'If fluid influence appears offset, inspect modelMatrix before changing force parameters.',
     ],
   },
+  'fluid-text': {
+    focus: 'Recreate the landing-page fluid typography pattern as a standalone WebGPU text layer.',
+    outcome: [
+      'Understand why the visible DOM text is used as the source of truth before being hidden.',
+      'Copy live typography into a CanvasTexture that can be rendered by the three.js scene.',
+      'Compose simple distortion and Art Ink overlay around the text without changing page layout.',
+    ],
+    mentalModel:
+      'Fluid Text is the hero text trick isolated: normal HTML owns layout, wrapping, and responsive typography, then a canvas texture mirrors those pixels into the WebGPU scene so the fluid field can refract and color the words.',
+    implementation: [
+      {
+        title: 'Lay out real DOM text first',
+        body: 'The source copy is normal HTML, so CSS controls font size, line breaks, and responsive placement. The WebGPU layer does not guess the layout.',
+      },
+      {
+        title: 'Mirror the DOM into a texture',
+        body: 'DomTextPlane reads computed font styles and element rectangles, draws the text into an offscreen canvas, and maps that CanvasTexture onto a full-screen plane.',
+      },
+      {
+        title: 'Hide the DOM after sync',
+        body: 'Once the texture is current, the original text becomes transparent. Selection and layout still come from the DOM, while the rendered pixels come from the scene pass.',
+      },
+      {
+        title: 'Run the hero-style post stack',
+        body: 'The scene pass is first refracted by simpleDistortion and then blended with Art Ink through fluidOverlay, matching the landing-page defaults.',
+      },
+    ],
+    parameters: [
+      {
+        name: 'headline + lead',
+        role: 'The DOM source strings that are mirrored into the WebGPU texture.',
+        tune: 'Keep the DOM as source of truth. After changing text, resync the texture instead of editing shader state.',
+      },
+      {
+        name: 'distortionIntensity',
+        role: 'Amount of fluid-driven UV displacement applied to the text scene.',
+        tune: 'Use enough to make pointer motion visible, but keep it below the point where letters become unreadable.',
+      },
+      {
+        name: 'overlayOpacity',
+        role: 'How much Art Ink is blended over the distorted text.',
+        tune: 'Lower it for product pages. Raise it for hero captures and social clips.',
+      },
+      {
+        name: 'splatRadius + splatForce',
+        role: 'Controls brush size and how much pointer motion enters the fluid field.',
+        tune: 'Use a larger radius than small object demos because the typography fills the viewport.',
+      },
+    ],
+    sourceFocus: [
+      'The DOM source block created inside the stage.',
+      'DomTextPlane.sync(), which converts element rectangles into a CanvasTexture.',
+      'The pipeline output: simpleDistortion followed by fluidOverlay("artInk", ...).',
+      'The resize path that resizes both FluidSimulation and the text plane.',
+    ],
+    productionNotes: [
+      'Wait for document.fonts.ready before the first sync when using web fonts.',
+      'Keep the DOM layer in the document for layout and accessibility, then hide only its painted color.',
+      'Resync on ResizeObserver or font-loading events in production; this example uses the stage resize path and editable controls.',
+    ],
+  },
 }
 
 export function getDemoTutorialPath(entry: ExampleEntry): string {
@@ -563,7 +624,9 @@ export function getDemoTutorial(entry: ExampleEntry): DemoTutorial {
         ? 'Composition demo'
         : entry.caseId === 'mega'
           ? 'Hero demo'
-          : 'Demo walkthrough',
+          : entry.caseId === 'fluid-text'
+            ? 'Hero text demo'
+            : 'Demo walkthrough',
     intro: `${level.intent} It uses the ${engine.label} path from \`${engine.importPath}\`, where the effect is built with ${engine.renderPath}`,
     focus: base.focus,
     outcome: base.outcome,
@@ -715,6 +778,25 @@ renderer.setAnimationLoop(() => {
   particles.step({ ...particleForces, modelMatrix: particles.mesh.matrixWorld }, morphTime)
   pipeline.render()
 })`
+  }
+
+  if (entry.caseId === 'fluid-text') {
+    return `const textPlane = new DomTextPlane(stage, [kicker, headline, lead])
+scene.add(textPlane.mesh)
+
+pipeline.outputNode = fluidOverlay(
+  'artInk',
+  simpleDistortion(scenePass, fluid.densityNode, 0.45),
+  fluid.densityNode,
+  fluid.dyeNode,
+  fluid.velocityNode,
+  { opacity: 0.5, vibrance: 0.5 },
+)
+
+function syncText() {
+  textPlane.sync(viewport.width, viewport.height)
+  domText.classList.add('is-synced')
+}`
   }
 
   return `const fluid = new FluidSimulation(renderer, { profile: 'balanced' })
