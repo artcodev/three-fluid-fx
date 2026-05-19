@@ -69,6 +69,25 @@ to get there — this library is for you.
       <a href="examples/glsl/minimal/particles-3d/main.ts">3D source</a>
     </td>
   </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <a href="https://three-fluid-fx.artcreativecode.com/examples/tsl/minimal/fluid-text/">
+        <img src="https://three-fluid-fx.artcreativecode.com/assets/previews/fx-example-fluid-text.png" width="70%" alt="Fluid text effect" />
+      </a>
+      <br/>
+      <strong>Fluid text (DOM typography → CanvasTexture)</strong>
+      <br/>
+      Mirror ordinary HTML text into a Three.js plane, then run it through fluid distortion and Art Ink overlay.
+      <br/>
+      <a href="https://three-fluid-fx.artcreativecode.com/examples/tsl/minimal/fluid-text/">live demo</a>
+      ·
+      <a href="https://three-fluid-fx.artcreativecode.com/tutorials/tsl/minimal/fluid-text/">tutorial</a>
+      ·
+      <a href="examples/tsl/minimal/fluid-text/main.ts">minimal source</a>
+      ·
+      <a href="examples/tsl/full/fluid-text/main.ts">full source</a>
+    </td>
+  </tr>
 </table>
 
 You bring a three.js scene; the library hands you solver outputs and a
@@ -439,6 +458,7 @@ running, walkthroughs live at `/tutorials/<pipeline>/<level>/<slug>/`.
 - [GPGPU Particles 2D source](examples/glsl/full/particles-2d/main.ts) and [GPGPU Particles 3D source](examples/glsl/full/particles-3d/main.ts) — persistent particle state driven by the fluid field.
 - [TSL Combined Demo source](examples/tsl/full/combined/main.ts) — combined WebGPU composition surface.
 - [TSL Mega Demo source](examples/tsl/full/mega/main.ts) — hero-style morphing WebGPU particle composition.
+- [Fluid Text minimal source](examples/tsl/minimal/fluid-text/main.ts) and [Fluid Text full source](examples/tsl/full/fluid-text/main.ts) — ordinary DOM typography mirrored into a `CanvasTexture`, then distorted and inked by the TSL fluid pipeline.
 
 ## Repo layout
 
@@ -474,6 +494,7 @@ examples/
 │   ├── controls/                               ← Tweakpane wrapper, param ranges
 │   ├── backgrounds/{glsl,tsl}/                 ← background implementations
 │   ├── particles/{glsl,tsl}/                   ← example particle systems
+│   ├── text/                                   ← DOM text to CanvasTexture helpers
 │   └── resolveProfile.ts                       ← URL profile resolver (?profile=balanced)
 ├── glsl/{minimal,full}/<slug>/main.ts          ← WebGL runtime entrypoints
 └── tsl/{minimal,full}/<slug>/main.ts           ← WebGPU runtime entrypoints
