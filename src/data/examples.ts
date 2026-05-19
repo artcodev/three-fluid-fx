@@ -10,6 +10,7 @@ export type ExampleCase =
   | 'particles-3d'
   | 'combined'
   | 'mega'
+  | 'fluid-text'
 
 export interface ExampleEntry {
   slug: string
@@ -122,6 +123,13 @@ const caseSummaries: ExampleCaseSummary[] = [
     description:
       'A hero-style WebGPU scene with morphing GPGPU particles, fluid distortion, and art ink overlay.',
   },
+  {
+    id: 'fluid-text',
+    title: 'Fluid Text',
+    badge: 'TSL',
+    description:
+      'The landing-page typography trick as a standalone WebGPU demo: DOM text becomes a live texture, then fluid distortion and art ink animate it.',
+  },
 ]
 
 const caseMeta: Record<
@@ -178,6 +186,12 @@ const caseMeta: Record<
     guideLabel: 'GLSL vs TSL',
     stageLabel: 'TSL mega morphing particle canvas',
   },
+  'fluid-text': {
+    shortTitle: 'Fluid Text',
+    guideHref: '/tutorials/effects-guide/',
+    guideLabel: 'Effects Guide',
+    stageLabel: 'TSL fluid text canvas',
+  },
 }
 
 const descriptions: Record<ExampleCase, string> = {
@@ -192,6 +206,7 @@ const descriptions: Record<ExampleCase, string> = {
     'A volumetric GPGPU particle cloud that lifts and swirls in 3D space based on 2D fluid winds.',
   combined: 'A full TSL/WebGPU composition that combines the main effect families.',
   mega: 'A hero-style TSL/WebGPU composition with centered morphing particles and fluid post-processing.',
+  'fluid-text': 'A hero-style TSL/WebGPU typography layer refracted and inked by the fluid field.',
 }
 
 const cardDescriptions: Record<
@@ -268,6 +283,14 @@ const cardDescriptions: Record<
       full: 'Hero-style morphing particle sculpture with art ink overlay, fluid distortion, and full tuning controls.',
     },
   },
+  'fluid-text': {
+    glsl: {},
+    tsl: {
+      minimal:
+        'Smallest DOM-to-CanvasTexture text layer with hero-style distortion and Art Ink overlay.',
+      full: 'DOM typography is copied into a CanvasTexture, then distorted and inked through the hero-style TSL pipeline.',
+    },
+  },
 }
 
 const orderByCase: Record<ExampleCase, number> = {
@@ -279,6 +302,7 @@ const orderByCase: Record<ExampleCase, number> = {
   'particles-3d': 4,
   combined: 6,
   mega: 7,
+  'fluid-text': 8,
 }
 
 function makeEntry(
@@ -320,10 +344,7 @@ function getPlaygroundId(slug: string): string {
   return slug.replaceAll('/', '-')
 }
 
-function makePlaygroundLinks(
-  slug: string,
-  language: 'ts' | 'js' = 'ts',
-): ExamplePlaygroundLink[] {
+function makePlaygroundLinks(slug: string, language: 'ts' | 'js' = 'ts'): ExamplePlaygroundLink[] {
   const id = getPlaygroundId(slug)
   const folder = language === 'ts' ? `playgrounds/${id}` : `playgrounds-js/${id}`
   const sourcePath =
@@ -393,6 +414,7 @@ export const examples: ExampleEntry[] = [
     'GPGPU Particles 3D',
     'TSL · Minimal · GPGPU Particles 3D',
   ),
+  makeEntry('tsl', 'minimal', 'fluid-text', 'Fluid Text', 'TSL · Minimal · Fluid Text'),
 
   makeEntry('tsl', 'full', 'overlay', 'Overlay', 'TSL · Example 01'),
   makeEntry('tsl', 'full', 'distortion', 'Distortion', 'Example 02 · TSL + WGSL'),
@@ -407,6 +429,7 @@ export const examples: ExampleEntry[] = [
   makeEntry('tsl', 'full', 'particles-3d', 'GPGPU Particles 3D', 'TSL · Example 04'),
   makeEntry('tsl', 'full', 'combined', 'Combined Demo', 'TSL · Full · Combined'),
   makeEntry('tsl', 'full', 'mega', 'Mega Demo', 'TSL · Full · Mega'),
+  makeEntry('tsl', 'full', 'fluid-text', 'Fluid Text', 'TSL · Full · Fluid Text'),
 ]
 
 export const exampleCases = caseSummaries

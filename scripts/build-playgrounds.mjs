@@ -25,6 +25,7 @@ const titleByCase = {
   'particles-3d': 'GPGPU Particles 3D',
   combined: 'Combined Demo',
   mega: 'Mega Demo',
+  'fluid-text': 'Fluid Text',
 }
 
 const playgroundSpecs = [
